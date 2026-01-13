@@ -23,7 +23,7 @@ import (
 
 const (
 	mcpName                 = "mcp-digitalocean"
-	mcpVersion              = "1.0.30"
+	mcpVersion              = "1.0.27"
 	wsLoggingContextTimeout = 15 * time.Second
 )
 
@@ -46,6 +46,7 @@ func main() {
 	wsLoggingURL := flag.String("ws-logging-url", getEnv("WS_LOGGING_URL", ""), "WebSocket URL for WebSocket logging (optional)")
 	wsLoggingToken := flag.String("ws-logging-token", getEnv("WS_LOGGING_TOKEN", ""), "Authentication token for WebSocket logging (optional)")
 	enableToolErrorLogging := flag.Bool("enable-tool-error-logging", getEnv("ENABLE_TOOL_ERROR_LOGGING", "false") == "true", "Enable logging of tool errors")
+	remoteMCP := flag.Bool("remote-mcp", getEnv("REMOTE_MCP", "false") == "true", "Indicate this server is running as a remote MCP (affects user agent for usage tracking)")
 	flag.Parse()
 
 	var level slog.Level
@@ -107,10 +108,6 @@ func main() {
 		wsLoggingHandler = wsLoggingHandler.WithAttrs([]slog.Attr{
 			slog.String("enabled_services", *serviceFlag),
 		}).(*wslogging.Handler)
-	} else {
-		wsLoggingHandler = wsLoggingHandler.WithAttrs([]slog.Attr{
-			slog.String("enabled_services", "all"),
-		}).(*wslogging.Handler)
 	}
 
 	// create logger after adding service attributes
@@ -131,12 +128,12 @@ func main() {
 
 	// by default, we create a new client per request.
 	getClientFn := func(ctx context.Context) (*godo.Client, error) {
-		return clientFromContext(ctx, *endpointFlag)
+		return clientFromContext(ctx, *endpointFlag, *remoteMCP)
 	}
 
 	// if using stdio, we can re-use the client.
 	if *transport == "stdio" {
-		godoClient, err := newGodoClientWithTokenAndEndpoint(context.Background(), token, *endpointFlag)
+		godoClient, err := newGodoClientWithTokenAndEndpoint(context.Background(), token, *endpointFlag, *remoteMCP)
 		if err != nil {
 			logger.Error("Failed to create DigitalOcean client: " + err.Error())
 			os.Exit(1)
@@ -167,7 +164,7 @@ func main() {
 	}
 }
 
-func clientFromContext(ctx context.Context, endpoint string) (*godo.Client, error) {
+func clientFromContext(ctx context.Context, endpoint string, isRemoteMCP bool) (*godo.Client, error) {
 	auth, ok := ctx.Value(middleware.AuthKey{}).(string)
 	if !ok || strings.TrimSpace(auth) == "" {
 		return nil, errors.New("no auth header found")
@@ -176,7 +173,7 @@ func clientFromContext(ctx context.Context, endpoint string) (*godo.Client, erro
 	if token == "" {
 		return nil, errors.New("no bearer token found")
 	}
-	client, err := newGodoClientWithTokenAndEndpoint(ctx, token, endpoint)
+	client, err := newGodoClientWithTokenAndEndpoint(ctx, token, endpoint, isRemoteMCP)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create godo client: %w", err)
 	}
@@ -185,7 +182,7 @@ func clientFromContext(ctx context.Context, endpoint string) (*godo.Client, erro
 }
 
 // newGodoClientWithTokenAndEndpoint initializes a new godo client with a custom user agent and endpoint.
-func newGodoClientWithTokenAndEndpoint(ctx context.Context, token string, endpoint string) (*godo.Client, error) {
+func newGodoClientWithTokenAndEndpoint(ctx context.Context, token string, endpoint string, isRemoteMCP bool) (*godo.Client, error) {
 	cleanToken := strings.Trim(strings.TrimSpace(token), "'")
 	ts := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: cleanToken})
 	oauthClient := oauth2.NewClient(ctx, ts)
@@ -196,10 +193,15 @@ func newGodoClientWithTokenAndEndpoint(ctx context.Context, token string, endpoi
 		RetryWaitMax: godo.PtrTo(float64(30)),
 	}
 
+	userAgent := fmt.Sprintf("%s/%s", mcpName, mcpVersion)
+	if isRemoteMCP {
+		userAgent = fmt.Sprintf("remote-%s/%s", mcpName, mcpVersion)
+	}
+
 	return godo.New(oauthClient,
 		godo.WithRetryAndBackoffs(retry),
 		godo.SetBaseURL(endpoint),
-		godo.SetUserAgent(fmt.Sprintf("%s/%s", mcpName, mcpVersion)))
+		godo.SetUserAgent(userAgent))
 }
 
 func runServer(ctx context.Context, s *server.MCPServer, logger *slog.Logger, bindAddr string, transport *string) error {
