@@ -46,7 +46,7 @@ func main() {
 	wsLoggingURL := flag.String("ws-logging-url", getEnv("WS_LOGGING_URL", ""), "WebSocket URL for WebSocket logging (optional)")
 	wsLoggingToken := flag.String("ws-logging-token", getEnv("WS_LOGGING_TOKEN", ""), "Authentication token for WebSocket logging (optional)")
 	enableToolErrorLogging := flag.Bool("enable-tool-error-logging", getEnv("ENABLE_TOOL_ERROR_LOGGING", "false") == "true", "Enable logging of tool errors")
-	userAgent := flag.String("user-agent", getEnv("UserAgent", ""), "Indicate this server is running as a remote MCP ")
+	userAgent := flag.String("user-agent", getEnv("USER_AGENT", ""), "Indicate this server is running as a remote MCP ")
 	flag.Parse()
 
 	var level slog.Level
@@ -199,7 +199,7 @@ func newGodoClientWithTokenAndEndpoint(ctx context.Context, token string, endpoi
 
 	mcpUserAgent := fmt.Sprintf("%s/%s", mcpName, mcpVersion)
 	if userAgent != "" {
-		mcpUserAgent = userAgent
+		mcpUserAgent = fmt.Sprintf("%s/%s", userAgent, mcpVersion)
 	}
 
 	return godo.New(oauthClient,
