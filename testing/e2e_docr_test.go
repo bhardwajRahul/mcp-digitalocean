@@ -169,11 +169,15 @@ func TestDOCRRepositoryOperations(t *testing.T) {
 
 	// list repositories (should be empty for a new registry)
 	t.Log("listing repositories...")
-	repos := callTool[[]*godo.RepositoryV2](t, "docr-repository-list", map[string]interface{}{
+	repoResult := callTool[struct {
+		Repositories []*godo.RepositoryV2 `json:"repositories"`
+		Meta         *godo.Meta           `json:"meta,omitempty"`
+	}](t, "docr-repository-list", map[string]interface{}{
 		"RegistryName": registryName,
 		"Page":         float64(1),
 		"PerPage":      float64(20),
 	})
+	repos := repoResult.Repositories
 	t.Logf("found %d repositories", len(repos))
 
 	// If there are repositories, test tag and manifest listing
@@ -183,22 +187,30 @@ func TestDOCRRepositoryOperations(t *testing.T) {
 
 		// list tags
 		t.Log("listing repository tags...")
-		tags := callTool[[]*godo.RepositoryTag](t, "docr-repository-tag-list", map[string]interface{}{
+		tagResult := callTool[struct {
+			Tags []*godo.RepositoryTag `json:"tags"`
+			Meta *godo.Meta            `json:"meta,omitempty"`
+		}](t, "docr-repository-tag-list", map[string]interface{}{
 			"RegistryName": registryName,
 			"Repository":   repoName,
 			"Page":         float64(1),
 			"PerPage":      float64(20),
 		})
+		tags := tagResult.Tags
 		t.Logf("found %d tags", len(tags))
 
 		// list manifests
 		t.Log("listing repository manifests...")
-		manifests := callTool[[]*godo.RepositoryManifest](t, "docr-repository-manifest-list", map[string]interface{}{
+		manifestResult := callTool[struct {
+			Manifests []*godo.RepositoryManifest `json:"manifests"`
+			Meta      *godo.Meta                 `json:"meta,omitempty"`
+		}](t, "docr-repository-manifest-list", map[string]interface{}{
 			"RegistryName": registryName,
 			"Repository":   repoName,
 			"Page":         float64(1),
 			"PerPage":      float64(20),
 		})
+		manifests := manifestResult.Manifests
 		t.Logf("found %d manifests", len(manifests))
 	}
 }
@@ -224,11 +236,15 @@ func TestDOCRGarbageCollectionOperations(t *testing.T) {
 
 	// list garbage collections (should be empty for new registry)
 	t.Log("listing garbage collections...")
-	gcs := callTool[[]*godo.GarbageCollection](t, "docr-garbage-collection-list", map[string]interface{}{
+	gcResult := callTool[struct {
+		GarbageCollections []*godo.GarbageCollection `json:"garbage_collections"`
+		Meta               *godo.Meta                `json:"meta,omitempty"`
+	}](t, "docr-garbage-collection-list", map[string]interface{}{
 		"RegistryName": registryName,
 		"Page":         float64(1),
 		"PerPage":      float64(20),
 	})
+	gcs := gcResult.GarbageCollections
 	t.Logf("found %d garbage collections", len(gcs))
 
 	// start a garbage collection
@@ -260,11 +276,15 @@ func TestDOCRGarbageCollectionOperations(t *testing.T) {
 
 	// list garbage collections again to confirm it shows up
 	t.Log("listing garbage collections after start...")
-	gcsAfter := callTool[[]*godo.GarbageCollection](t, "docr-garbage-collection-list", map[string]interface{}{
+	gcAfterResult := callTool[struct {
+		GarbageCollections []*godo.GarbageCollection `json:"garbage_collections"`
+		Meta               *godo.Meta                `json:"meta,omitempty"`
+	}](t, "docr-garbage-collection-list", map[string]interface{}{
 		"RegistryName": registryName,
 		"Page":         float64(1),
 		"PerPage":      float64(20),
 	})
+	gcsAfter := gcAfterResult.GarbageCollections
 	require.NotEmpty(t, gcsAfter, "should have at least one garbage collection")
 	requireFoundInList(t, gcsAfter, func(g *godo.GarbageCollection) bool { return g.UUID == gc.UUID }, "garbage collection")
 	t.Logf("found garbage collection in list (total: %d)", len(gcsAfter))
@@ -386,9 +406,12 @@ func TestDOCRDeleteTagAndManifest(t *testing.T) {
 	require.NotNil(t, repos)
 	require.False(t, repos.IsError, "listing repos should not error")
 
-	var repoList []*godo.RepositoryV2
+	var result struct {
+		Repositories []*godo.RepositoryV2 `json:"repositories"`
+		Meta         *godo.Meta           `json:"meta,omitempty"`
+	}
 	repoJSON := repos.Content[0].(mcp.TextContent).Text
-	err = json.Unmarshal([]byte(repoJSON), &repoList)
+	err = json.Unmarshal([]byte(repoJSON), &result)
 	require.NoError(t, err)
-	t.Logf("registry has %d repositories", len(repoList))
+	t.Logf("registry has %d repositories", len(result.Repositories))
 }
