@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 services:
   mcp-digitalocean:
     build:
@@ -9,6 +9,7 @@ services:
       - LOG_LEVEL=debug
       - BIND_ADDR=0.0.0.0:8080
       - ENABLE_TOOL_ERROR_LOGGING=true
+      - USER_AGENT=do-remote-mcp
       - WS_LOGGING_URL=ws://ws-echo-server:8081
       - WS_LOGGING_TOKEN=example-token
     ports:
@@ -23,4 +24,3 @@ services:
     environment:
       - PORT=8081
     restart: unless-stopped
-
