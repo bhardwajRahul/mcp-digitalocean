@@ -594,6 +594,7 @@ Each service provides a detailed README describing all available tools, resource
 - [Marketplace Service](pkg/registry/marketplace/README.md)
 - [Model Catalog Service](pkg/registry/genai-modelcatalog/README.md)
 - [DOKS Service](pkg/registry/doks/README.md)
+- [DOCR Service](pkg/registry/docr/README.md)
 
 ## Example Tools
 
