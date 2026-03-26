@@ -17,6 +17,7 @@ import (
 	"mcp-digitalocean/pkg/registry/insights"
 	"mcp-digitalocean/pkg/registry/marketplace"
 	"mcp-digitalocean/pkg/registry/networking"
+	"mcp-digitalocean/pkg/registry/serverless"
 	"mcp-digitalocean/pkg/registry/spaces"
 	"mcp-digitalocean/pkg/registry/volumes"
 
@@ -40,6 +41,7 @@ var supportedServices = map[string]struct{}{
 	"doks":               {},
 	"docr":               {},
 	"volumes":            {},
+	"functions":          {},
 }
 
 // registerAppTools registers the app platform tools with the MCP server.
@@ -141,6 +143,13 @@ func registerDOCRTools(s *server.MCPServer, getClient getClientFn) error {
 	return nil
 }
 
+func registerServerlessTools(s *server.MCPServer, getClient getClientFn) error {
+	s.AddTools(serverless.NewNamespaceTool(getClient).Tools()...)
+	s.AddTools(serverless.NewTriggerTool(getClient).Tools()...)
+	s.AddTools(serverless.NewFunctionTool(getClient).Tools()...)
+	return nil
+}
+
 func registerDatabasesTools(s *server.MCPServer, getClient getClientFn) error {
 	s.AddTools(dbaas.NewClusterTool(getClient).Tools()...)
 	s.AddTools(dbaas.NewFirewallTool(getClient).Tools()...)
@@ -220,6 +229,10 @@ func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, s
 		case "volumes":
 			if err := registerVolumesTools(s, getClient); err != nil {
 				return fmt.Errorf("failed to register volumes tools: %w", err)
+			}
+		case "functions":
+			if err := registerFunctionsTools(s, getClient); err != nil {
+				return fmt.Errorf("failed to register functions tools: %w", err)
 			}
 		default:
 			return fmt.Errorf("unsupported service: %s, supported service are: %v", svc, setToString(supportedServices))
