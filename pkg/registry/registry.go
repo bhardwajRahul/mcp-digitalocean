@@ -8,6 +8,7 @@ import (
 
 	"mcp-digitalocean/pkg/registry/account"
 	"mcp-digitalocean/pkg/registry/apps"
+	"mcp-digitalocean/pkg/registry/blockstorage"
 	"mcp-digitalocean/pkg/registry/common"
 	"mcp-digitalocean/pkg/registry/dbaas"
 	"mcp-digitalocean/pkg/registry/docr"
@@ -153,6 +154,11 @@ func registerDatabasesTools(s *server.MCPServer, getClient getClientFn) error {
 	return nil
 }
 
+func registerBlockStorageTools(s *server.MCPServer, getClient getClientFn) error {
+	s.AddTools(blockstorage.NewVolumeTool(getClient).Tools()...)
+	return nil
+}
+
 // Register registers the set of tools for the specified services with the MCP server.
 // We either register a subset of tools of the services are specified, or we register all tools if no services are specified.
 func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, servicesToActivate ...string) error {
@@ -208,6 +214,10 @@ func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, s
 		case "docr":
 			if err := registerDOCRTools(s, getClient); err != nil {
 				return fmt.Errorf("failed to register DOCR tools: %w", err)
+			}
+		case "blockstorage":
+			if err := registerBlockStorageTools(s, getClient); err != nil {
+				return fmt.Errorf("failed to register block storage tools: %w", err)
 			}
 		default:
 			return fmt.Errorf("unsupported service: %s, supported service are: %v", svc, setToString(supportedServices))
