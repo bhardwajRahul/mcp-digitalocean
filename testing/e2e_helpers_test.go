@@ -33,6 +33,7 @@ const (
 
 	// Timeouts
 	defaultActionTimeout     = 5 * time.Minute
+	imageTransferTimeout     = 15 * time.Minute
 	dropletActiveTimeout     = 10 * time.Minute
 	dropletDeleteTimeout     = 2 * time.Minute
 	imageAvailableTimeout    = 5 * time.Minute
@@ -108,7 +109,7 @@ func triggerActionAndWait(t *testing.T, tool string, args map[string]any, resour
 
 func triggerImageActionAndWait(t *testing.T, tool string, args map[string]any, imageID int) {
 	t.Helper()
-	triggerGenericActionAndWait(t, tool, args, imageID, testhelpers.WaitForImageAction, defaultActionTimeout)
+	triggerGenericActionAndWait(t, tool, args, imageID, testhelpers.WaitForImageAction, imageTransferTimeout)
 }
 
 func callTool[T any](t *testing.T, name string, args map[string]any) T {
