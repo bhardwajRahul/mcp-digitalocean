@@ -41,6 +41,22 @@ func (m *MockFunctionsService) EXPECT() *MockFunctionsServiceMockRecorder {
 	return m.recorder
 }
 
+// CreateAccessKey mocks base method.
+func (m *MockFunctionsService) CreateAccessKey(arg0 context.Context, arg1 string, arg2 *godo.FunctionsAccessKeyCreateRequest) (*godo.FunctionsAccessKey, *godo.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateAccessKey", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*godo.FunctionsAccessKey)
+	ret1, _ := ret[1].(*godo.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// CreateAccessKey indicates an expected call of CreateAccessKey.
+func (mr *MockFunctionsServiceMockRecorder) CreateAccessKey(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccessKey", reflect.TypeOf((*MockFunctionsService)(nil).CreateAccessKey), arg0, arg1, arg2)
+}
+
 // CreateNamespace mocks base method.
 func (m *MockFunctionsService) CreateNamespace(arg0 context.Context, arg1 *godo.FunctionsNamespaceCreateRequest) (*godo.FunctionsNamespace, *godo.Response, error) {
 	m.ctrl.T.Helper()
@@ -71,6 +87,21 @@ func (m *MockFunctionsService) CreateTrigger(arg0 context.Context, arg1 string, 
 func (mr *MockFunctionsServiceMockRecorder) CreateTrigger(arg0, arg1, arg2 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateTrigger", reflect.TypeOf((*MockFunctionsService)(nil).CreateTrigger), arg0, arg1, arg2)
+}
+
+// DeleteAccessKey mocks base method.
+func (m *MockFunctionsService) DeleteAccessKey(arg0 context.Context, arg1, arg2 string) (*godo.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAccessKey", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*godo.Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteAccessKey indicates an expected call of DeleteAccessKey.
+func (mr *MockFunctionsServiceMockRecorder) DeleteAccessKey(arg0, arg1, arg2 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAccessKey", reflect.TypeOf((*MockFunctionsService)(nil).DeleteAccessKey), arg0, arg1, arg2)
 }
 
 // DeleteNamespace mocks base method.
@@ -135,6 +166,22 @@ func (mr *MockFunctionsServiceMockRecorder) GetTrigger(arg0, arg1, arg2 any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTrigger", reflect.TypeOf((*MockFunctionsService)(nil).GetTrigger), arg0, arg1, arg2)
 }
 
+// ListAccessKeys mocks base method.
+func (m *MockFunctionsService) ListAccessKeys(arg0 context.Context, arg1 string) ([]godo.FunctionsAccessKey, *godo.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAccessKeys", arg0, arg1)
+	ret0, _ := ret[0].([]godo.FunctionsAccessKey)
+	ret1, _ := ret[1].(*godo.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListAccessKeys indicates an expected call of ListAccessKeys.
+func (mr *MockFunctionsServiceMockRecorder) ListAccessKeys(arg0, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccessKeys", reflect.TypeOf((*MockFunctionsService)(nil).ListAccessKeys), arg0, arg1)
+}
+
 // ListNamespaces mocks base method.
 func (m *MockFunctionsService) ListNamespaces(arg0 context.Context) ([]godo.FunctionsNamespace, *godo.Response, error) {
 	m.ctrl.T.Helper()
@@ -165,6 +212,22 @@ func (m *MockFunctionsService) ListTriggers(arg0 context.Context, arg1 string) (
 func (mr *MockFunctionsServiceMockRecorder) ListTriggers(arg0, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListTriggers", reflect.TypeOf((*MockFunctionsService)(nil).ListTriggers), arg0, arg1)
+}
+
+// UpdateAccessKey mocks base method.
+func (m *MockFunctionsService) UpdateAccessKey(arg0 context.Context, arg1, arg2 string, arg3 *godo.FunctionsAccessKeyUpdateRequest) (*godo.FunctionsAccessKey, *godo.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateAccessKey", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*godo.FunctionsAccessKey)
+	ret1, _ := ret[1].(*godo.Response)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// UpdateAccessKey indicates an expected call of UpdateAccessKey.
+func (mr *MockFunctionsServiceMockRecorder) UpdateAccessKey(arg0, arg1, arg2, arg3 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateAccessKey", reflect.TypeOf((*MockFunctionsService)(nil).UpdateAccessKey), arg0, arg1, arg2, arg3)
 }
 
 // UpdateTrigger mocks base method.

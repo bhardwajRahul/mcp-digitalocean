@@ -143,10 +143,12 @@ func registerDOCRTools(s *server.MCPServer, getClient getClientFn) error {
 	return nil
 }
 
-func registerServerlessTools(s *server.MCPServer, getClient getClientFn) error {
+func registerServerlessTools(ctx context.Context, s *server.MCPServer, getClient getClientFn) error {
 	s.AddTools(serverless.NewNamespaceTool(getClient).Tools()...)
 	s.AddTools(serverless.NewTriggerTool(getClient).Tools()...)
-	s.AddTools(serverless.NewFunctionTool(getClient).Tools()...)
+
+	accessKeySvc := serverless.NewGodoAccessKeyService(getClient)
+	s.AddTools(serverless.NewFunctionTool(ctx, getClient, serverless.WithAccessKeyService(accessKeySvc)).Tools()...)
 	return nil
 }
 
@@ -172,7 +174,8 @@ func registerVolumesTools(s *server.MCPServer, getClient getClientFn) error {
 
 // Register registers the set of tools for the specified services with the MCP server.
 // We either register a subset of tools of the services are specified, or we register all tools if no services are specified.
-func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, servicesToActivate ...string) error {
+// The ctx parameter controls the lifetime of background goroutines (e.g., cache cleanup).
+func Register(ctx context.Context, logger *slog.Logger, s *server.MCPServer, getClient getClientFn, servicesToActivate ...string) error {
 	if len(servicesToActivate) == 0 {
 		logger.Warn("no services specified, loading all supported services")
 		for k := range supportedServices {

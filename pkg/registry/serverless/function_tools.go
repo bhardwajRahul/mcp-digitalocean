@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 
+	middleware "mcp-digitalocean/internal"
+
 	"github.com/digitalocean/godo"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -30,20 +32,91 @@ type namespaceInfo struct {
 
 // FunctionTool provides serverless function management tools via the OpenWhisk API.
 type FunctionTool struct {
-	client     func(ctx context.Context) (*godo.Client, error)
-	httpClient *http.Client
+	client       func(ctx context.Context) (*godo.Client, error)
+	httpClient   *http.Client
+	cache        *accessKeyCache
+	accessKeySvc AccessKeyService
 }
 
-// NewFunctionTool creates a new FunctionTool.
-func NewFunctionTool(client func(ctx context.Context) (*godo.Client, error)) *FunctionTool {
-	return &FunctionTool{
-		client:     client,
-		httpClient: http.DefaultClient,
+// FunctionToolOption configures a FunctionTool.
+type FunctionToolOption func(*FunctionTool)
+
+// WithAccessKeyService sets the access key service for OpenWhisk authentication.
+// When set, resolveNamespace will create and cache access keys instead of using
+// the deprecated namespace UUID:Key fields.
+func WithAccessKeyService(svc AccessKeyService) FunctionToolOption {
+	return func(f *FunctionTool) {
+		f.accessKeySvc = svc
 	}
 }
 
-// resolveNamespace fetches the namespace and returns its OpenWhisk API host and auth key.
+// NewFunctionTool creates a new FunctionTool.
+// The ctx parameter controls the lifetime of the background cache cleanup goroutine.
+func NewFunctionTool(ctx context.Context, client func(ctx context.Context) (*godo.Client, error), opts ...FunctionToolOption) *FunctionTool {
+	f := &FunctionTool{
+		client:     client,
+		httpClient: http.DefaultClient,
+		cache:      newAccessKeyCache(ctx),
+	}
+	for _, opt := range opts {
+		opt(f)
+	}
+	return f
+}
+
+// resolveNamespace returns the OpenWhisk API host and auth key for a namespace.
+// It first attempts to use access keys (cached or newly created) if an
+// AccessKeyService is configured, then falls back to the legacy UUID:Key path.
 func (f *FunctionTool) resolveNamespace(ctx context.Context, namespaceID string) (*namespaceInfo, error) {
+	if f.accessKeySvc != nil {
+		info, err := f.resolveNamespaceViaAccessKey(ctx, namespaceID)
+		if err == nil {
+			return info, nil
+		}
+		// Fall through to legacy path on access key failure.
+	}
+	return f.resolveNamespaceLegacy(ctx, namespaceID)
+}
+
+// resolveNamespaceViaAccessKey resolves namespace credentials using the access key
+// cache and service. It hashes the caller's bearer token (from context) to scope
+// cache entries per user in multi-tenant SSE mode.
+func (f *FunctionTool) resolveNamespaceViaAccessKey(ctx context.Context, namespaceID string) (*namespaceInfo, error) {
+	tokenHash := extractTokenHash(ctx)
+
+	if cached := f.cache.get(tokenHash, namespaceID); cached != nil {
+		return &namespaceInfo{
+			apiHost: cached.apiHost,
+			key:     cached.id + ":" + cached.secret,
+		}, nil
+	}
+
+	ak, err := f.accessKeySvc.CreateAccessKey(ctx, namespaceID, &AccessKeyCreateRequest{
+		Name:      accessKeyClientName,
+		ExpiresIn: accessKeyTTL,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create access key: %w", err)
+	}
+
+	apiHost := strings.TrimRight(ak.APIHost, "/")
+	f.cache.put(tokenHash, namespaceID, &cachedAccessKey{
+		id:        ak.ID,
+		secret:    ak.Secret,
+		apiHost:   apiHost,
+		expiresAt: ak.ExpiresAt,
+	})
+
+	return &namespaceInfo{
+		apiHost: apiHost,
+		key:     ak.ID + ":" + ak.Secret,
+	}, nil
+}
+
+// resolveNamespaceLegacy fetches the namespace via godo and uses the deprecated
+// UUID:Key fields for OpenWhisk basic auth. This path is used when no
+// AccessKeyService is configured or when access key creation fails.
+func (f *FunctionTool) resolveNamespaceLegacy(ctx context.Context, namespaceID string) (*namespaceInfo, error) {
 	client, err := f.client(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
@@ -62,6 +135,20 @@ func (f *FunctionTool) resolveNamespace(ctx context.Context, namespaceID string)
 		apiHost: strings.TrimRight(ns.ApiHost, "/"),
 		key:     ns.UUID + ":" + ns.Key,
 	}, nil
+}
+
+// extractTokenHash returns a hashed version of the bearer token from context.
+// Returns an empty string when no token is present (e.g., stdio transport).
+func extractTokenHash(ctx context.Context) string {
+	auth, ok := ctx.Value(middleware.AuthKey{}).(string)
+	if !ok || auth == "" {
+		return ""
+	}
+	token := strings.TrimPrefix(auth, "Bearer ")
+	if token == "" {
+		return ""
+	}
+	return hashToken(token)
 }
 
 // owRequest makes an authenticated HTTP request to the OpenWhisk API.

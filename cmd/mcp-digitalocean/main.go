@@ -149,6 +149,7 @@ func main() {
 
 	// register the tools.
 	err := registry.Register(
+		ctx,
 		logger,
 		svr,
 		getClientFn,

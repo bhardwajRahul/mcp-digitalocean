@@ -4,15 +4,27 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
+
+	middleware "mcp-digitalocean/internal"
 
 	"github.com/digitalocean/godo"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
 )
+
+type mockAccessKeySvc struct {
+	createFn func(ctx context.Context, namespace string, req *AccessKeyCreateRequest) (*AccessKey, error)
+}
+
+func (m *mockAccessKeySvc) CreateAccessKey(ctx context.Context, namespace string, req *AccessKeyCreateRequest) (*AccessKey, error) {
+	return m.createFn(ctx, namespace, req)
+}
 
 func setupFunctionToolWithMockAndServer(t *testing.T, mockFunctions godo.FunctionsService, handler http.HandlerFunc) *FunctionTool {
 	t.Helper()
@@ -34,7 +46,7 @@ func setupFunctionToolWithMockAndServer(t *testing.T, mockFunctions godo.Functio
 		}, nil
 	}
 
-	tool := NewFunctionTool(client)
+	tool := NewFunctionTool(context.Background(), client)
 	tool.httpClient = ts.Client()
 	return tool
 }
@@ -95,7 +107,7 @@ func TestFunctionTool_list(t *testing.T) {
 				client := func(ctx context.Context) (*godo.Client, error) {
 					return &godo.Client{Functions: mock}, nil
 				}
-				tool := NewFunctionTool(client)
+				tool := NewFunctionTool(context.Background(), client)
 				req := mcp.CallToolRequest{Params: mcp.CallToolParams{Arguments: tc.args}}
 				resp, _ := tool.list(context.Background(), req)
 				require.NotNil(t, resp)
@@ -162,7 +174,7 @@ func TestFunctionTool_get(t *testing.T) {
 				client := func(ctx context.Context) (*godo.Client, error) {
 					return &godo.Client{Functions: mock}, nil
 				}
-				tool := NewFunctionTool(client)
+				tool := NewFunctionTool(context.Background(), client)
 				req := mcp.CallToolRequest{Params: mcp.CallToolParams{Arguments: tc.args}}
 				resp, _ := tool.get(context.Background(), req)
 				require.NotNil(t, resp)
@@ -267,7 +279,7 @@ func TestFunctionTool_create(t *testing.T) {
 				client := func(ctx context.Context) (*godo.Client, error) {
 					return &godo.Client{Functions: mock}, nil
 				}
-				tool := NewFunctionTool(client)
+				tool := NewFunctionTool(context.Background(), client)
 				req := mcp.CallToolRequest{Params: mcp.CallToolParams{Arguments: tc.args}}
 				resp, _ := tool.create(context.Background(), req)
 				require.NotNil(t, resp)
@@ -327,7 +339,7 @@ func TestFunctionTool_deleteFn(t *testing.T) {
 				client := func(ctx context.Context) (*godo.Client, error) {
 					return &godo.Client{Functions: mock}, nil
 				}
-				tool := NewFunctionTool(client)
+				tool := NewFunctionTool(context.Background(), client)
 				req := mcp.CallToolRequest{Params: mcp.CallToolParams{Arguments: tc.args}}
 				resp, _ := tool.deleteFn(context.Background(), req)
 				require.NotNil(t, resp)
@@ -414,7 +426,7 @@ func TestFunctionTool_invoke(t *testing.T) {
 				client := func(ctx context.Context) (*godo.Client, error) {
 					return &godo.Client{Functions: mock}, nil
 				}
-				tool := NewFunctionTool(client)
+				tool := NewFunctionTool(context.Background(), client)
 				req := mcp.CallToolRequest{Params: mcp.CallToolParams{Arguments: tc.args}}
 				resp, _ := tool.invoke(context.Background(), req)
 				require.NotNil(t, resp)
@@ -491,7 +503,7 @@ func TestFunctionTool_listActivations(t *testing.T) {
 				client := func(ctx context.Context) (*godo.Client, error) {
 					return &godo.Client{Functions: mock}, nil
 				}
-				tool := NewFunctionTool(client)
+				tool := NewFunctionTool(context.Background(), client)
 				req := mcp.CallToolRequest{Params: mcp.CallToolParams{Arguments: tc.args}}
 				resp, _ := tool.listActivations(context.Background(), req)
 				require.NotNil(t, resp)
@@ -572,7 +584,7 @@ func TestFunctionTool_getActivation(t *testing.T) {
 				client := func(ctx context.Context) (*godo.Client, error) {
 					return &godo.Client{Functions: mock}, nil
 				}
-				tool := NewFunctionTool(client)
+				tool := NewFunctionTool(context.Background(), client)
 				req := mcp.CallToolRequest{Params: mcp.CallToolParams{Arguments: tc.args}}
 				resp, _ := tool.getActivation(context.Background(), req)
 				require.NotNil(t, resp)
@@ -649,7 +661,7 @@ func TestFunctionTool_getActivationLogs(t *testing.T) {
 				client := func(ctx context.Context) (*godo.Client, error) {
 					return &godo.Client{Functions: mock}, nil
 				}
-				tool := NewFunctionTool(client)
+				tool := NewFunctionTool(context.Background(), client)
 				req := mcp.CallToolRequest{Params: mcp.CallToolParams{Arguments: tc.args}}
 				resp, _ := tool.getActivationLogs(context.Background(), req)
 				require.NotNil(t, resp)
@@ -673,4 +685,141 @@ func TestFunctionTool_getActivationLogs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestResolveNamespace_AccessKeyPath(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := middleware.WithAuthKey(context.Background(), "Bearer test-token-123")
+	callCount := 0
+
+	svc := &mockAccessKeySvc{
+		createFn: func(_ context.Context, namespace string, req *AccessKeyCreateRequest) (*AccessKey, error) {
+			callCount++
+			require.Equal(t, "fn-ns-1", namespace)
+			require.Equal(t, accessKeyClientName, req.Name)
+			require.Equal(t, "1d", req.ExpiresIn)
+			return &AccessKey{
+				ID:        "dof_v1_abc123",
+				Secret:    "dof_v1_abc123:secret456",
+				APIHost:   "https://faas.example.com",
+				ExpiresAt: time.Now().Add(2 * time.Hour),
+				Name:      req.Name,
+			}, nil
+		},
+	}
+
+	mock := NewMockFunctionsService(ctrl)
+	client := func(ctx context.Context) (*godo.Client, error) {
+		return &godo.Client{Functions: mock}, nil
+	}
+
+	tool := NewFunctionTool(context.Background(), client, WithAccessKeyService(svc))
+
+	info, err := tool.resolveNamespace(ctx, "fn-ns-1")
+	require.NoError(t, err)
+	require.Equal(t, "https://faas.example.com", info.apiHost)
+	require.Equal(t, "dof_v1_abc123:dof_v1_abc123:secret456", info.key)
+	require.Equal(t, 1, callCount)
+
+	info2, err := tool.resolveNamespace(ctx, "fn-ns-1")
+	require.NoError(t, err)
+	require.Equal(t, info.key, info2.key)
+	require.Equal(t, 1, callCount, "second call should use cache, not create a new key")
+}
+
+func TestResolveNamespace_AccessKeyFallsBackToLegacy(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	ctx := middleware.WithAuthKey(context.Background(), "Bearer test-token-123")
+
+	svc := &mockAccessKeySvc{
+		createFn: func(_ context.Context, _ string, _ *AccessKeyCreateRequest) (*AccessKey, error) {
+			return nil, errors.New("access key service unavailable")
+		},
+	}
+
+	mock := NewMockFunctionsService(ctrl)
+	mock.EXPECT().GetNamespace(gomock.Any(), "fn-ns-1").Return(&godo.FunctionsNamespace{
+		ApiHost: "https://legacy.example.com",
+		UUID:    "legacy-uuid",
+		Key:     "legacy-key",
+	}, nil, nil)
+
+	client := func(ctx context.Context) (*godo.Client, error) {
+		return &godo.Client{Functions: mock}, nil
+	}
+
+	tool := NewFunctionTool(context.Background(), client, WithAccessKeyService(svc))
+
+	info, err := tool.resolveNamespace(ctx, "fn-ns-1")
+	require.NoError(t, err)
+	require.Equal(t, "https://legacy.example.com", info.apiHost)
+	require.Equal(t, "legacy-uuid:legacy-key", info.key)
+}
+
+func TestResolveNamespace_NoAccessKeyService_UsesLegacy(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mock := NewMockFunctionsService(ctrl)
+	mock.EXPECT().GetNamespace(gomock.Any(), "fn-ns-1").Return(&godo.FunctionsNamespace{
+		ApiHost: "https://legacy.example.com",
+		UUID:    "legacy-uuid",
+		Key:     "legacy-key",
+	}, nil, nil)
+
+	client := func(ctx context.Context) (*godo.Client, error) {
+		return &godo.Client{Functions: mock}, nil
+	}
+
+	tool := NewFunctionTool(context.Background(), client)
+
+	info, err := tool.resolveNamespace(context.Background(), "fn-ns-1")
+	require.NoError(t, err)
+	require.Equal(t, "https://legacy.example.com", info.apiHost)
+	require.Equal(t, "legacy-uuid:legacy-key", info.key)
+}
+
+func TestResolveNamespace_CachePerUser(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	callCount := 0
+	svc := &mockAccessKeySvc{
+		createFn: func(_ context.Context, _ string, _ *AccessKeyCreateRequest) (*AccessKey, error) {
+			callCount++
+			id := fmt.Sprintf("dof_v1_%d", callCount)
+			return &AccessKey{
+				ID:        id,
+				Secret:    id + ":secret",
+				APIHost:   "https://faas.example.com",
+				ExpiresAt: time.Now().Add(2 * time.Hour),
+			}, nil
+		},
+	}
+
+	mock := NewMockFunctionsService(ctrl)
+	client := func(ctx context.Context) (*godo.Client, error) {
+		return &godo.Client{Functions: mock}, nil
+	}
+
+	tool := NewFunctionTool(context.Background(), client, WithAccessKeyService(svc))
+
+	ctx1 := middleware.WithAuthKey(context.Background(), "Bearer user-token-1")
+	ctx2 := middleware.WithAuthKey(context.Background(), "Bearer user-token-2")
+
+	_, err := tool.resolveNamespace(ctx1, "fn-ns-1")
+	require.NoError(t, err)
+	require.Equal(t, 1, callCount)
+
+	_, err = tool.resolveNamespace(ctx2, "fn-ns-1")
+	require.NoError(t, err)
+	require.Equal(t, 2, callCount, "different user should not share cached key")
+
+	_, err = tool.resolveNamespace(ctx1, "fn-ns-1")
+	require.NoError(t, err)
+	require.Equal(t, 2, callCount, "same user should reuse cached key")
 }
