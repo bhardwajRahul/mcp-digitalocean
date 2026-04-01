@@ -1,4 +1,4 @@
-package blockstorage
+package storage
 
 import (
 	"context"
@@ -33,7 +33,7 @@ func (vt *VolumeTool) createVolume(ctx context.Context, req mcp.CallToolRequest)
 		return mcp.NewToolResultError("Name is required"), nil
 	}
 	sizeGigaBytes, ok := args["SizeGigaBytes"].(float64)
-	if !ok || sizeGigaBytes == 0 {
+	if !ok || sizeGigaBytes < 1 {
 		return mcp.NewToolResultError("SizeGigaBytes is required"), nil
 	}
 	region, ok := args["Region"].(string)
@@ -75,7 +75,7 @@ func (vt *VolumeTool) createVolume(ctx context.Context, req mcp.CallToolRequest)
 	if err != nil {
 		return mcp.NewToolResultErrorFromErr("api error", err), nil
 	}
-	
+
 	jsonVolume, err := json.MarshalIndent(volume, "", "  ")
 	if err != nil {
 		return mcp.NewToolResultErrorFromErr("marshal error", err), nil
