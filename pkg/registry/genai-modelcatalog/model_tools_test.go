@@ -131,10 +131,19 @@ func TestModelTool_getModelCard(t *testing.T) {
 		Uuid:              "12345678-1234-1234-1234-123456789012",
 		InferenceName:     "llama3.3-70b-instruct",
 		Name:              "Llama 3.3 Instruct (70B)",
+		Description:       "An advanced language model with greater capabilities due to its larger size.",
 		Provider:          "Meta",
 		Url:               "https://example.com/model",
 		Usecases:          []string{"chat", "completion"},
 		ModelAvailability: "serverless",
+		ContextWindow:     131072,
+		Capabilities:      []string{"inference", "chat"},
+		Modalities: &godo.ModelModalities{
+			Input:  []string{"text"},
+			Output: []string{"text"},
+		},
+		ParameterCount: 70.0,
+		Type:           "chat",
 		Agreement: &godo.Agreement{
 			Name:        "Meta Llama 3.3 License",
 			Description: "License for Llama 3.3",
@@ -220,21 +229,37 @@ func TestModelTool_getModelCard(t *testing.T) {
 
 			if tc.checkModel {
 				var result struct {
-					UUID              string          `json:"uuid"`
-					Name              string          `json:"name"`
-					Agreement         *godo.Agreement `json:"agreement,omitempty"`
-					ModelAvailability string          `json:"model_availability,omitempty"`
+					UUID              string                `json:"uuid"`
+					Name              string                `json:"name"`
+					Description       string                `json:"description,omitempty"`
+					Provider          string                `json:"provider,omitempty"`
+					Agreement         *godo.Agreement       `json:"agreement,omitempty"`
+					ModelAvailability string                `json:"model_availability,omitempty"`
+					ContextWindow     int64                 `json:"context_window,omitempty"`
+					Capabilities      []string              `json:"capabilities,omitempty"`
+					Modalities        *godo.ModelModalities `json:"modalities,omitempty"`
+					ParameterCount    float64               `json:"parameter_count,omitempty"`
+					Type              string                `json:"type,omitempty"`
 				}
 				err := json.Unmarshal([]byte(textContent.Text), &result)
 				require.NoError(t, err)
 				require.Equal(t, testModel.Uuid, result.UUID, "should return exact UUID")
 				require.Equal(t, testModel.Name, result.Name, "should return exact name")
+				require.Equal(t, testModel.Description, result.Description, "should return exact description")
+				require.Equal(t, testModel.Provider, result.Provider, "should return exact provider")
 				require.Equal(t, testModel.ModelAvailability, result.ModelAvailability, "should return exact model availability")
+				require.Equal(t, testModel.ContextWindow, result.ContextWindow, "should return exact context window")
+				require.Equal(t, testModel.Capabilities, result.Capabilities, "should return exact capabilities")
+				require.Equal(t, testModel.ParameterCount, result.ParameterCount, "should return exact parameter count")
+				require.Equal(t, testModel.Type, result.Type, "should return exact type")
 				require.NotNil(t, result.Agreement, "should include agreement")
 				require.Equal(t, testModel.Agreement.Name, result.Agreement.Name, "should return exact agreement name")
 				require.Equal(t, testModel.Agreement.Description, result.Agreement.Description, "should return exact agreement description")
 				require.Equal(t, testModel.Agreement.Url, result.Agreement.Url, "should return exact agreement URL")
 				require.Equal(t, testModel.Agreement.Uuid, result.Agreement.Uuid, "should return exact agreement UUID")
+				require.NotNil(t, result.Modalities, "should include modalities")
+				require.Equal(t, testModel.Modalities.Input, result.Modalities.Input, "should return exact modalities input")
+				require.Equal(t, testModel.Modalities.Output, result.Modalities.Output, "should return exact modalities output")
 			}
 		})
 	}
