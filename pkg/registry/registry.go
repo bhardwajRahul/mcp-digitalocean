@@ -39,6 +39,7 @@ var supportedServices = map[string]struct{}{
 	"insights":           {},
 	"doks":               {},
 	"docr":               {},
+	"docs":               {},
 }
 
 // registerAppTools registers the app platform tools with the MCP server.
