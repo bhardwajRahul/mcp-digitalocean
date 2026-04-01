@@ -19,6 +19,8 @@ const (
 	indexCacheTTL    = 1 * time.Hour
 	pageCacheTTL     = 30 * time.Minute
 	negativeCacheTTL = 10 * time.Minute
+
+	maxResponseSize = 10 * 1024 * 1024 // 10 MB
 )
 
 // DocsEntry represents a single entry from the llms.txt index.
@@ -53,10 +55,14 @@ func newCache() *cache {
 }
 
 func (c *cache) get(key string) (any, bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 	entry, ok := c.store[key]
-	if !ok || time.Now().After(entry.expiresAt) {
+	if !ok {
+		return nil, false
+	}
+	if time.Now().After(entry.expiresAt) {
+		delete(c.store, key)
 		return nil, false
 	}
 	return entry.data, true
@@ -66,6 +72,14 @@ func (c *cache) set(key string, data any, ttl time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.store[key] = cacheEntry{data: data, expiresAt: time.Now().Add(ttl)}
+}
+
+// DocsService defines the interface for fetching and searching DigitalOcean documentation.
+type DocsService interface {
+	GetDocsIndex() (*DocsIndex, error)
+	GetServiceIndex(service string) (*DocsIndex, error)
+	FetchDocPage(url string) (string, error)
+	FindQuickstart(service string) (string, string, error)
 }
 
 // DocsClient fetches and searches DigitalOcean documentation.
@@ -103,7 +117,7 @@ func (d *DocsClient) fetch(url string) (string, error) {
 		return "", fmt.Errorf("failed to fetch %s: HTTP %d", url, resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
 	if err != nil {
 		return "", fmt.Errorf("failed to read response from %s: %w", url, err)
 	}
@@ -263,6 +277,11 @@ func SearchIndex(index *DocsIndex, query string) []DocsEntry {
 		score int
 	}
 
+	wordRegexes := make([]*regexp.Regexp, len(terms))
+	for i, term := range terms {
+		wordRegexes[i] = regexp.MustCompile(`\b` + regexp.QuoteMeta(term) + `\b`)
+	}
+
 	var results []scored
 
 	for _, entry := range index.Entries {
@@ -271,13 +290,12 @@ func SearchIndex(index *DocsIndex, query string) []DocsEntry {
 		sectionLower := strings.ToLower(entry.Section)
 		score := 0
 
-		for _, term := range terms {
+		for i, term := range terms {
 			if strings.Contains(titleLower, term) {
 				score += 10
 			}
 			// Exact word boundary match in title
-			wordRe := regexp.MustCompile(`\b` + regexp.QuoteMeta(term) + `\b`)
-			if wordRe.MatchString(titleLower) {
+			if wordRegexes[i].MatchString(titleLower) {
 				score += 5
 			}
 			if strings.Contains(descLower, term) {

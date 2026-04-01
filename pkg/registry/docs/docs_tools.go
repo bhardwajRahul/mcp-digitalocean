@@ -15,7 +15,7 @@ const (
 
 // DocsTool provides MCP tool handlers for querying DigitalOcean documentation.
 type DocsTool struct {
-	client *DocsClient
+	client DocsService
 }
 
 // NewDocsTool creates a new DocsTool instance.

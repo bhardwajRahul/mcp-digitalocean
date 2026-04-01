@@ -176,6 +176,7 @@ The easiest way to get started is to use DigitalOcean's hosted MCP services. Eac
 | marketplace  | https://marketplace.mcp.digitalocean.com/mcp| Discover and manage DigitalOcean Marketplace applications. |
 | networking   | https://networking.mcp.digitalocean.com/mcp | Manage domains, DNS records, certificates, firewalls, load balancers, reserved IPs, BYOIP Prefixes, VPCs, and CDNs. |
 | spaces       | https://spaces.mcp.digitalocean.com/mcp     | DigitalOcean Spaces object storage and Spaces access keys for S3-compatible storage. |
+| docs         | https://docs.mcp.digitalocean.com/mcp       | Search and retrieve DigitalOcean public documentation. No API token required. |
 
 ---
 
@@ -593,6 +594,7 @@ Each service provides a detailed README describing all available tools, resource
 - [Marketplace Service](pkg/registry/marketplace/README.md)
 - [DOKS Service](pkg/registry/doks/README.md)
 - [DOCR Service](pkg/registry/docr/README.md)
+- [Docs Service](pkg/registry/docs/README.md)
 
 ## Example Tools
 
