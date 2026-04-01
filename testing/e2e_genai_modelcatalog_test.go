@@ -113,7 +113,7 @@ func TestModelCatalogGetCard(t *testing.T) {
 	require.NotEmpty(t, model.Name, "model should have a name")
 	require.Contains(t, strings.ToLower(model.Name), strings.ToLower(searchQuery), "model name should contain the search query")
 	t.Logf("successfully retrieved model card: %s", model.Name)
-	
+
 	if model.Description != "" {
 		t.Logf("description: %s", model.Description)
 	}
