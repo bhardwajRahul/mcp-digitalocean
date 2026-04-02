@@ -136,7 +136,7 @@ func TestModelTool_getModelCard(t *testing.T) {
 		Url:               "https://example.com/model",
 		Usecases:          []string{"chat", "completion"},
 		ModelAvailability: "serverless",
-		ContextWindow:     131072,
+		ContextWindow:     "131072",
 		Capabilities:      []string{"inference", "chat"},
 		Modalities: &godo.ModelModalities{
 			Input:  []string{"text"},
@@ -235,7 +235,7 @@ func TestModelTool_getModelCard(t *testing.T) {
 					Provider          string                `json:"provider,omitempty"`
 					Agreement         *godo.Agreement       `json:"agreement,omitempty"`
 					ModelAvailability string                `json:"model_availability,omitempty"`
-					ContextWindow     int64                 `json:"context_window,omitempty"`
+					ContextWindow     string                `json:"context_window,omitempty"`
 					Capabilities      []string              `json:"capabilities,omitempty"`
 					Modalities        *godo.ModelModalities `json:"modalities,omitempty"`
 					ParameterCount    float64               `json:"parameter_count,omitempty"`

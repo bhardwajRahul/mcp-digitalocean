@@ -88,7 +88,7 @@ func (m *ModelTool) getModelCard(ctx context.Context, req mcp.CallToolRequest) (
 		Provider          string                `json:"provider,omitempty"`
 		Agreement         *godo.Agreement       `json:"agreement,omitempty"`
 		ModelAvailability string                `json:"model_availability,omitempty"`
-		ContextWindow     int64                 `json:"context_window,omitempty"`
+		ContextWindow     string                `json:"context_window,omitempty"`
 		Capabilities      []string              `json:"capabilities,omitempty"`
 		Modalities        *godo.ModelModalities `json:"modalities,omitempty"`
 		ParameterCount    float64               `json:"parameter_count,omitempty"`

@@ -100,7 +100,7 @@ func TestModelCatalogGetCard(t *testing.T) {
 		Provider          string                `json:"provider,omitempty"`
 		Agreement         *godo.Agreement       `json:"agreement,omitempty"`
 		ModelAvailability string                `json:"model_availability,omitempty"`
-		ContextWindow     int64                 `json:"context_window,omitempty"`
+		ContextWindow     string                `json:"context_window,omitempty"`
 		Capabilities      []string              `json:"capabilities,omitempty"`
 		Modalities        *godo.ModelModalities `json:"modalities,omitempty"`
 		ParameterCount    float64               `json:"parameter_count,omitempty"`
@@ -123,8 +123,8 @@ func TestModelCatalogGetCard(t *testing.T) {
 	if model.ModelAvailability != "" {
 		t.Logf("model availability: %s", model.ModelAvailability)
 	}
-	if model.ContextWindow > 0 {
-		t.Logf("context window: %d", model.ContextWindow)
+	if model.ContextWindow != "" {
+		t.Logf("context window: %s", model.ContextWindow)
 	}
 	if len(model.Capabilities) > 0 {
 		t.Logf("capabilities: %v", model.Capabilities)
@@ -212,7 +212,7 @@ func TestModelCatalogWorkflow(t *testing.T) {
 			Provider          string                `json:"provider,omitempty"`
 			Agreement         *godo.Agreement       `json:"agreement,omitempty"`
 			ModelAvailability string                `json:"model_availability,omitempty"`
-			ContextWindow     int64                 `json:"context_window,omitempty"`
+			ContextWindow     string                `json:"context_window,omitempty"`
 			Capabilities      []string              `json:"capabilities,omitempty"`
 			Modalities        *godo.ModelModalities `json:"modalities,omitempty"`
 			ParameterCount    float64               `json:"parameter_count,omitempty"`
@@ -231,8 +231,8 @@ func TestModelCatalogWorkflow(t *testing.T) {
 		if model.Provider != "" {
 			t.Logf("    provider: %s", model.Provider)
 		}
-		if model.ContextWindow > 0 {
-			t.Logf("    context window: %d", model.ContextWindow)
+		if model.ContextWindow != "" {
+			t.Logf("    context window: %s", model.ContextWindow)
 		}
 	}
 
