@@ -49,6 +49,13 @@ func WaitForImageAction(ctx context.Context, client *godo.Client, imageID, actio
 	})
 }
 
+// WaitForStorageAction polls for a block storage (volume) action to complete or error.
+func WaitForStorageAction(ctx context.Context, client *godo.Client, volumeID string, actionID int, interval, timeout time.Duration) (*godo.Action, error) {
+	return waitForActionGeneric(ctx, interval, timeout, func() (*godo.Action, *godo.Response, error) {
+		return client.StorageActions.Get(ctx, volumeID, actionID)
+	})
+}
+
 // WaitForActions waits for multiple actions sequentially.
 func WaitForActions(ctx context.Context, client *godo.Client, dropletID int, actionIDs []int, interval, timeout time.Duration) ([]*godo.Action, error) {
 	results := make([]*godo.Action, 0, len(actionIDs))

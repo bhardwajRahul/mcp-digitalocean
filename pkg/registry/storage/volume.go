@@ -169,7 +169,7 @@ func (vt *VolumeTool) getVolumeByID(ctx context.Context, req mcp.CallToolRequest
 
 func (vt *VolumeTool) deleteVolume(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := req.GetArguments()
-	volumeID, ok := args["VolumeID"].(string)
+	volumeID, ok := args["ID"].(string)
 	if !ok || volumeID == "" {
 		return mcp.NewToolResultError("Volume ID is required"), nil
 	}
@@ -312,7 +312,7 @@ func (vt *VolumeTool) getSnapshotByID(ctx context.Context, req mcp.CallToolReque
 
 func (vt *VolumeTool) deleteSnapshot(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := req.GetArguments()
-	snapshotID, ok := args["SnapshotID"].(string)
+	snapshotID, ok := args["ID"].(string)
 	if !ok || snapshotID == "" {
 		return mcp.NewToolResultError("Snapshot ID is required"), nil
 	}
@@ -370,7 +370,7 @@ func (vt *VolumeTool) Tools() []server.ServerTool {
 			Tool: mcp.NewTool(
 				"volume-delete",
 				mcp.WithDescription("Delete a block storage volume by ID"),
-				mcp.WithString("VolumeID", mcp.Required(), mcp.Description("The ID of the volume to delete")),
+				mcp.WithString("ID", mcp.Required(), mcp.Description("The ID of the volume to delete")),
 			),
 		},
 		{
@@ -406,7 +406,7 @@ func (vt *VolumeTool) Tools() []server.ServerTool {
 			Tool: mcp.NewTool(
 				"volume-snapshot-delete",
 				mcp.WithDescription("Delete a snapshot by ID"),
-				mcp.WithString("SnapshotID", mcp.Required(), mcp.Description("The ID of the snapshot to delete")),
+				mcp.WithString("ID", mcp.Required(), mcp.Description("The ID of the snapshot to delete")),
 			),
 		},
 	}
