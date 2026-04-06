@@ -1,4 +1,4 @@
-## DigitalOcean Block Storage Tools
+## DigitalOcean Volume Tools
 
 This directory provides tools for managing DigitalOcean block storage volumes, volume snapshots, and volume actions via the MCP Server. All operations are exposed as tools with argument-based input, and list endpoints support pagination where applicable.
 

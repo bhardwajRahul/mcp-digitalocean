@@ -18,7 +18,7 @@ import (
 	"mcp-digitalocean/pkg/registry/marketplace"
 	"mcp-digitalocean/pkg/registry/networking"
 	"mcp-digitalocean/pkg/registry/spaces"
-	"mcp-digitalocean/pkg/registry/storage"
+	"mcp-digitalocean/pkg/registry/volumes"
 
 	"github.com/digitalocean/godo"
 	"github.com/mark3labs/mcp-go/server"
@@ -39,7 +39,7 @@ var supportedServices = map[string]struct{}{
 	"insights":           {},
 	"doks":               {},
 	"docr":               {},
-	"storage":            {},
+	"volumes":            {},
 }
 
 // registerAppTools registers the app platform tools with the MCP server.
@@ -155,9 +155,9 @@ func registerDatabasesTools(s *server.MCPServer, getClient getClientFn) error {
 	return nil
 }
 
-func registerStorageTools(s *server.MCPServer, getClient getClientFn) error {
-	s.AddTools(storage.NewVolumeTool(getClient).Tools()...)
-	s.AddTools(storage.NewVolumeActionsTool(getClient).Tools()...)
+func registerVolumesTools(s *server.MCPServer, getClient getClientFn) error {
+	s.AddTools(volumes.NewVolumeTool(getClient).Tools()...)
+	s.AddTools(volumes.NewVolumeActionsTool(getClient).Tools()...)
 	return nil
 }
 
@@ -217,9 +217,9 @@ func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, s
 			if err := registerDOCRTools(s, getClient); err != nil {
 				return fmt.Errorf("failed to register DOCR tools: %w", err)
 			}
-		case "storage":
-			if err := registerStorageTools(s, getClient); err != nil {
-				return fmt.Errorf("failed to register storage tools: %w", err)
+		case "volumes":
+			if err := registerVolumesTools(s, getClient); err != nil {
+				return fmt.Errorf("failed to register volumes tools: %w", err)
 			}
 		default:
 			return fmt.Errorf("unsupported service: %s, supported service are: %v", svc, setToString(supportedServices))
