@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/digitalocean/godo"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -20,7 +19,7 @@ const (
 	maxVolumeListPerPage     = 200
 )
 
-// NewVolumeTool creates a new AppsTool instance
+// NewVolumeTool creates a new VolumeTool instance
 func NewVolumeTool(client func(ctx context.Context) (*godo.Client, error)) *VolumeTool {
 	return &VolumeTool{client: client}
 }
@@ -68,7 +67,7 @@ func (vt *VolumeTool) createVolume(ctx context.Context, req mcp.CallToolRequest)
 
 	client, err := vt.client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+		return mcp.NewToolResultErrorFromErr("Error getting DigitalOcean client", err), nil
 	}
 
 	volume, _, err := client.Storage.CreateVolume(ctx, volumeCreateRequest)
@@ -112,7 +111,7 @@ func (vt *VolumeTool) listVolumes(ctx context.Context, req mcp.CallToolRequest) 
 
 	client, err := vt.client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+		return mcp.NewToolResultErrorFromErr("Error getting DigitalOcean client", err), nil
 	}
 
 	volumes, _, err := client.Storage.ListVolumes(ctx, listRequest)
@@ -145,14 +144,14 @@ func (vt *VolumeTool) listVolumes(ctx context.Context, req mcp.CallToolRequest) 
 
 func (vt *VolumeTool) getVolumeByID(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := req.GetArguments()
-	volumeID, ok := args["VolumeID"].(string)
+	volumeID, ok := args["ID"].(string)
 	if !ok || volumeID == "" {
 		return mcp.NewToolResultError("Volume ID is required"), nil
 	}
 
 	client, err := vt.client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+		return mcp.NewToolResultErrorFromErr("Error getting DigitalOcean client", err), nil
 	}
 
 	volume, _, err := client.Storage.GetVolume(ctx, volumeID)
@@ -176,7 +175,7 @@ func (vt *VolumeTool) deleteVolume(ctx context.Context, req mcp.CallToolRequest)
 
 	client, err := vt.client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+		return mcp.NewToolResultErrorFromErr("Error getting DigitalOcean client", err), nil
 	}
 
 	_, err = client.Storage.DeleteVolume(ctx, volumeID)
@@ -215,7 +214,7 @@ func (vt *VolumeTool) createSnapshot(ctx context.Context, req mcp.CallToolReques
 
 	client, err := vt.client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+		return mcp.NewToolResultErrorFromErr("Error getting DigitalOcean client", err), nil
 	}
 
 	snapshot, _, err := client.Storage.CreateSnapshot(ctx, request)
@@ -251,7 +250,7 @@ func (vt *VolumeTool) listSnapshots(ctx context.Context, req mcp.CallToolRequest
 
 	client, err := vt.client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+		return mcp.NewToolResultErrorFromErr("Error getting DigitalOcean client", err), nil
 	}
 
 	options := &godo.ListOptions{
@@ -288,14 +287,14 @@ func (vt *VolumeTool) listSnapshots(ctx context.Context, req mcp.CallToolRequest
 
 func (vt *VolumeTool) getSnapshotByID(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := req.GetArguments()
-	snapshotID, ok := args["SnapshotID"].(string)
+	snapshotID, ok := args["ID"].(string)
 	if !ok || snapshotID == "" {
 		return mcp.NewToolResultError("Snapshot ID is required"), nil
 	}
 
 	client, err := vt.client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+		return mcp.NewToolResultErrorFromErr("Error getting DigitalOcean client", err), nil
 	}
 
 	snapshot, _, err := client.Storage.GetSnapshot(ctx, snapshotID)
@@ -319,7 +318,7 @@ func (vt *VolumeTool) deleteSnapshot(ctx context.Context, req mcp.CallToolReques
 
 	client, err := vt.client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+		return mcp.NewToolResultErrorFromErr("Error getting DigitalOcean client", err), nil
 	}
 
 	_, err = client.Storage.DeleteSnapshot(ctx, snapshotID)
@@ -329,6 +328,7 @@ func (vt *VolumeTool) deleteSnapshot(ctx context.Context, req mcp.CallToolReques
 	return mcp.NewToolResultText("Snapshot deleted successfully"), nil
 }
 
+// Tools returns MCP server tools for block storage volumes and their snapshots (create, list, get, delete).
 func (vt *VolumeTool) Tools() []server.ServerTool {
 	tools := []server.ServerTool{
 		{
@@ -337,7 +337,7 @@ func (vt *VolumeTool) Tools() []server.ServerTool {
 				"volume-create",
 				mcp.WithDescription("Create a new block storage volume"),
 				mcp.WithString("Name", mcp.Required(), mcp.Description("The name of the volume")),
-				mcp.WithNumber("SizeGigaBytes", mcp.Required(), mcp.Description("The size of the volume in GiB")),
+				mcp.WithNumber("SizeGigaBytes", mcp.Required(), mcp.Description("The size of the volume in GB")),
 				mcp.WithString("Region", mcp.Required(), mcp.Description("The region slug where the volume will be created")),
 				mcp.WithString("Description", mcp.Description("A human-readable description of the volume (optional)")),
 				mcp.WithString("SnapshotID", mcp.Description("The ID of a snapshot to create the volume from (optional)")),
@@ -362,7 +362,7 @@ func (vt *VolumeTool) Tools() []server.ServerTool {
 			Tool: mcp.NewTool(
 				"volume-get",
 				mcp.WithDescription("Get a block storage volume by ID"),
-				mcp.WithString("VolumeID", mcp.Required(), mcp.Description("The ID of the volume to get")),
+				mcp.WithString("ID", mcp.Required(), mcp.Description("The ID of the volume to get")),
 			),
 		},
 		{
@@ -398,7 +398,7 @@ func (vt *VolumeTool) Tools() []server.ServerTool {
 			Tool: mcp.NewTool(
 				"volume-snapshot-get",
 				mcp.WithDescription("Get a snapshot by ID"),
-				mcp.WithString("SnapshotID", mcp.Required(), mcp.Description("The ID of the snapshot to get")),
+				mcp.WithString("ID", mcp.Required(), mcp.Description("The ID of the snapshot to get")),
 			),
 		},
 		{

@@ -139,7 +139,7 @@ func TestVolumeTool_deleteVolume(t *testing.T) {
 		{
 			name: "Successful delete",
 			args: map[string]any{
-				"VolumeID": "123",
+				"ID": "123",
 			},
 			mockSetup: func(m *MockStorageService) {
 				m.EXPECT().
@@ -151,14 +151,14 @@ func TestVolumeTool_deleteVolume(t *testing.T) {
 			expectText:  "Volume deleted successfully",
 		},
 		{
-			name:        "Missing VolumeID",
+			name:        "Missing ID",
 			args:        map[string]any{},
 			expectError: true,
 		},
 		{
 			name: "API error",
 			args: map[string]any{
-				"VolumeID": "123",
+				"ID": "123",
 			},
 			mockSetup: func(m *MockStorageService) {
 				m.EXPECT().
@@ -213,7 +213,7 @@ func TestVolumeTool_getVolumeByID(t *testing.T) {
 	}{
 		{
 			name: "Successful get",
-			args: map[string]any{"VolumeID": "vol-123"},
+			args: map[string]any{"ID": "vol-123"},
 			mockSetup: func(m *MockStorageService) {
 				m.EXPECT().
 					GetVolume(gomock.Any(), "vol-123").
@@ -222,18 +222,18 @@ func TestVolumeTool_getVolumeByID(t *testing.T) {
 			},
 		},
 		{
-			name:        "Missing VolumeID",
+			name:        "Missing ID",
 			args:        map[string]any{},
 			expectError: true,
 		},
 		{
-			name:        "Empty VolumeID",
-			args:        map[string]any{"VolumeID": ""},
+			name:        "Empty ID",
+			args:        map[string]any{"ID": ""},
 			expectError: true,
 		},
 		{
 			name: "API error",
-			args: map[string]any{"VolumeID": "vol-123"},
+			args: map[string]any{"ID": "vol-123"},
 			mockSetup: func(m *MockStorageService) {
 				m.EXPECT().
 					GetVolume(gomock.Any(), "vol-123").
@@ -571,7 +571,7 @@ func TestVolumeTool_deleteSnapshot(t *testing.T) {
 		{
 			name: "Successful delete",
 			args: map[string]any{
-				"SnapshotID": "snap-123",
+				"ID": "snap-123",
 			},
 			mockSetup: func(m *MockStorageService) {
 				m.EXPECT().
@@ -583,14 +583,14 @@ func TestVolumeTool_deleteSnapshot(t *testing.T) {
 			expectText:  "Snapshot deleted successfully",
 		},
 		{
-			name:        "Missing SnapshotID",
+			name:        "Missing ID",
 			args:        map[string]any{},
 			expectError: true,
 		},
 		{
 			name: "API error",
 			args: map[string]any{
-				"SnapshotID": "snap-123",
+				"ID": "snap-123",
 			},
 			mockSetup: func(m *MockStorageService) {
 				m.EXPECT().
@@ -622,6 +622,83 @@ func TestVolumeTool_deleteSnapshot(t *testing.T) {
 			require.NotNil(t, resp)
 			require.False(t, resp.IsError)
 			require.Contains(t, resp.Content[0].(mcp.TextContent).Text, tc.expectText)
+		})
+	}
+}
+
+func TestVolumeTool_getSnapshotByID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	testSnapshot := &godo.Snapshot{
+		ID:   "snap-abc",
+		Name: "test-snap",
+	}
+
+	tests := []struct {
+		name        string
+		args        map[string]any
+		mockSetup   func(*MockStorageService)
+		expectError bool
+	}{
+		{
+			name: "Successful get",
+			args: map[string]any{"ID": "snap-abc"},
+			mockSetup: func(m *MockStorageService) {
+				m.EXPECT().
+					GetSnapshot(gomock.Any(), "snap-abc").
+					Return(testSnapshot, nil, nil).
+					Times(1)
+			},
+		},
+		{
+			name:        "Missing ID",
+			args:        map[string]any{},
+			expectError: true,
+		},
+		{
+			name:        "Empty ID",
+			args:        map[string]any{"ID": ""},
+			expectError: true,
+		},
+		{
+			name: "API error",
+			args: map[string]any{"ID": "snap-abc"},
+			mockSetup: func(m *MockStorageService) {
+				m.EXPECT().
+					GetSnapshot(gomock.Any(), "snap-abc").
+					Return(nil, nil, errors.New("api error")).
+					Times(1)
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mockStorage := NewMockStorageService(ctrl)
+			if tc.mockSetup != nil {
+				tc.mockSetup(mockStorage)
+			}
+			tool := setupVolumeToolWithMocks(mockStorage)
+			req := mcp.CallToolRequest{Params: mcp.CallToolParams{Arguments: tc.args}}
+			resp, err := tool.getSnapshotByID(context.Background(), req)
+
+			if tc.expectError {
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.True(t, resp.IsError)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+			require.False(t, resp.IsError)
+
+			var out godo.Snapshot
+			require.NoError(t, json.Unmarshal([]byte(resp.Content[0].(mcp.TextContent).Text), &out))
+			require.Equal(t, testSnapshot.ID, out.ID)
+			require.Equal(t, testSnapshot.Name, out.Name)
 		})
 	}
 }

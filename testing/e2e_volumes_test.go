@@ -17,7 +17,7 @@ func TestVolumeLifecycle(t *testing.T) {
 	newVolume := CreateTestVolume(t, "mcp-e2e-volume")
 
 	getVolume := callTool[godo.Volume](t, "volume-get", map[string]any{
-		"VolumeID": newVolume.ID,
+		"ID": newVolume.ID,
 	})
 
 	require.Equal(t, newVolume.ID, getVolume.ID)
@@ -37,7 +37,7 @@ func TestVolumeLifecycle(t *testing.T) {
 	t.Logf("[Created] Snapshot %s: Name=%s Size=%f", newSnapshot.ID, newSnapshot.Name, newSnapshot.SizeGigaBytes)
 
 	getSnapshot := callTool[godo.Snapshot](t, "volume-snapshot-get", map[string]any{
-		"SnapshotID": newSnapshot.ID,
+		"ID": newSnapshot.ID,
 	})
 	require.Equal(t, newSnapshot.ID, getSnapshot.ID)
 	t.Logf("[Get] Successfully retrieved snapshot:")

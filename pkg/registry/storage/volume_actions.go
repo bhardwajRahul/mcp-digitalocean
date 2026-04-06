@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/digitalocean/godo"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -14,6 +13,7 @@ type VolumeActionsTool struct {
 	client func(ctx context.Context) (*godo.Client, error)
 }
 
+// NewVolumeActionsTool creates a new VolumeActionsTool instance
 func NewVolumeActionsTool(client func(ctx context.Context) (*godo.Client, error)) *VolumeActionsTool {
 	return &VolumeActionsTool{client: client}
 }
@@ -31,7 +31,7 @@ func (v *VolumeActionsTool) attachVolume(ctx context.Context, req mcp.CallToolRe
 
 	client, err := v.client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+		return mcp.NewToolResultErrorFromErr("Error getting DigitalOcean client", err), nil
 	}
 
 	action, _, err := client.StorageActions.Attach(ctx, volumeID, int(dropletID))
@@ -41,7 +41,7 @@ func (v *VolumeActionsTool) attachVolume(ctx context.Context, req mcp.CallToolRe
 
 	jsonAction, err := json.MarshalIndent(action, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("marshal error: %w", err)
+		return mcp.NewToolResultErrorFromErr("marshal error", err), nil
 	}
 	return mcp.NewToolResultText(string(jsonAction)), nil
 }
@@ -59,7 +59,7 @@ func (v *VolumeActionsTool) detachVolume(ctx context.Context, req mcp.CallToolRe
 
 	client, err := v.client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+		return mcp.NewToolResultErrorFromErr("Error getting DigitalOcean client", err), nil
 	}
 
 	action, _, err := client.StorageActions.DetachByDropletID(ctx, volumeID, int(dropletID))
@@ -69,7 +69,7 @@ func (v *VolumeActionsTool) detachVolume(ctx context.Context, req mcp.CallToolRe
 
 	jsonAction, err := json.MarshalIndent(action, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("marshal error: %w", err)
+		return mcp.NewToolResultErrorFromErr("marshal error", err), nil
 	}
 	return mcp.NewToolResultText(string(jsonAction)), nil
 }
@@ -87,7 +87,7 @@ func (v *VolumeActionsTool) getVolumeAction(ctx context.Context, req mcp.CallToo
 
 	client, err := v.client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+		return mcp.NewToolResultErrorFromErr("Error getting DigitalOcean client", err), nil
 	}
 
 	action, _, err := client.StorageActions.Get(ctx, volumeID, int(actionID))
@@ -96,7 +96,7 @@ func (v *VolumeActionsTool) getVolumeAction(ctx context.Context, req mcp.CallToo
 	}
 	jsonAction, err := json.MarshalIndent(action, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("marshal error: %w", err)
+		return mcp.NewToolResultErrorFromErr("marshal error", err), nil
 	}
 	return mcp.NewToolResultText(string(jsonAction)), nil
 }
@@ -122,7 +122,7 @@ func (v *VolumeActionsTool) listVolumeActions(ctx context.Context, req mcp.CallT
 
 	client, err := v.client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+		return mcp.NewToolResultErrorFromErr("Error getting DigitalOcean client", err), nil
 	}
 
 	options := &godo.ListOptions{
@@ -136,7 +136,7 @@ func (v *VolumeActionsTool) listVolumeActions(ctx context.Context, req mcp.CallT
 	}
 	jsonActions, err := json.MarshalIndent(actions, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("marshal error: %w", err)
+		return mcp.NewToolResultErrorFromErr("marshal error", err), nil
 	}
 	return mcp.NewToolResultText(string(jsonActions)), nil
 }
@@ -157,7 +157,7 @@ func (v *VolumeActionsTool) resizeVolume(ctx context.Context, req mcp.CallToolRe
 	}
 	client, err := v.client(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+		return mcp.NewToolResultErrorFromErr("Error getting DigitalOcean client", err), nil
 	}
 
 	action, _, err := client.StorageActions.Resize(ctx, volumeID, int(sizeGigaBytes), region)
@@ -167,11 +167,12 @@ func (v *VolumeActionsTool) resizeVolume(ctx context.Context, req mcp.CallToolRe
 
 	jsonAction, err := json.MarshalIndent(action, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("marshal error: %w", err)
+		return mcp.NewToolResultErrorFromErr("marshal error", err), nil
 	}
 	return mcp.NewToolResultText(string(jsonAction)), nil
 }
 
+// Tools returns MCP server tools for volume lifecycle actions (attach, detach, resize, and action list/get).
 func (v *VolumeActionsTool) Tools() []server.ServerTool {
 	return []server.ServerTool{
 		{
@@ -212,7 +213,7 @@ func (v *VolumeActionsTool) Tools() []server.ServerTool {
 			Tool: mcp.NewTool("volume-resize",
 				mcp.WithDescription("Resize a volume"),
 				mcp.WithString("VolumeID", mcp.Required(), mcp.Description("The ID of the volume to resize")),
-				mcp.WithNumber("SizeGigaBytes", mcp.Required(), mcp.Description("The size of the volume in GiB")),
+				mcp.WithNumber("SizeGigaBytes", mcp.Required(), mcp.Description("The size of the volume in GB")),
 				mcp.WithString("Region", mcp.Required(), mcp.Description("The region slug where the volume will be resized")),
 			),
 		},

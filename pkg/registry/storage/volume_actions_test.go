@@ -39,6 +39,16 @@ func TestVolumeActionsTool_attachVolume(t *testing.T) {
 			expectError: false,
 		},
 		{
+			name:        "Missing VolumeID",
+			args:        map[string]any{"DropletID": float64(456)},
+			expectError: true,
+		},
+		{
+			name:        "Missing DropletID",
+			args:        map[string]any{"VolumeID": "123"},
+			expectError: true,
+		},
+		{
 			name: "API error",
 			args: map[string]any{"VolumeID": "123", "DropletID": float64(456)},
 			mockSetup: func(m *MockStorageActionsService) {
@@ -58,6 +68,7 @@ func TestVolumeActionsTool_attachVolume(t *testing.T) {
 			resp, err := tool.attachVolume(context.Background(), req)
 
 			if tc.expectError {
+				require.NoError(t, err)
 				require.NotNil(t, resp)
 				require.True(t, resp.IsError)
 				return
@@ -123,6 +134,7 @@ func TestVolumeActionsTool_detachVolume(t *testing.T) {
 			resp, err := tool.detachVolume(context.Background(), req)
 
 			if tc.expectError {
+				require.NoError(t, err)
 				require.NotNil(t, resp)
 				require.True(t, resp.IsError)
 				return
@@ -188,6 +200,7 @@ func TestVolumeActionsTool_getVolumeAction(t *testing.T) {
 			resp, err := tool.getVolumeAction(context.Background(), req)
 
 			if tc.expectError {
+				require.NoError(t, err)
 				require.NotNil(t, resp)
 				require.True(t, resp.IsError)
 				return
@@ -261,6 +274,7 @@ func TestVolumeActionsTool_listVolumeActions(t *testing.T) {
 			resp, err := tool.listVolumeActions(context.Background(), req)
 
 			if tc.expectError {
+				require.NoError(t, err)
 				require.NotNil(t, resp)
 				require.True(t, resp.IsError)
 				return
@@ -333,6 +347,7 @@ func TestVolumeActionsTool_resizeVolume(t *testing.T) {
 			resp, err := tool.resizeVolume(context.Background(), req)
 
 			if tc.expectError {
+				require.NoError(t, err)
 				require.NotNil(t, resp)
 				require.True(t, resp.IsError)
 				return

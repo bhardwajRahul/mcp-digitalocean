@@ -12,7 +12,7 @@ This directory provides tools for managing DigitalOcean block storage volumes, v
 Create a new block storage volume.  
 **Arguments:**  
   - `Name` (string, required): The name of the volume  
-  - `SizeGigaBytes` (number, required): The size of the volume in GiB  
+  - `SizeGigaBytes` (number, required): The size of the volume in GB  
   - `Region` (string, required): Region slug where the volume will be created  
   - `Description` (string, optional): Human-readable description of the volume  
   - `SnapshotID` (string, optional): Snapshot ID to create the volume from  
@@ -29,7 +29,7 @@ List block storage volumes with optional filters. Supports pagination.
 - **volume-get**  
 Get a block storage volume by ID.  
 **Arguments:**  
-  - `VolumeID` (string, required): The ID of the volume
+  - `ID` (string, required): The ID of the volume
 - **volume-delete**  
 Delete a block storage volume by ID.  
 **Arguments:**  
@@ -54,7 +54,7 @@ List snapshots for a volume. Supports pagination.
 - **volume-snapshot-get**  
 Get a snapshot by ID.  
 **Arguments:**  
-  - `SnapshotID` (string, required): The ID of the snapshot
+  - `ID` (string, required): The ID of the snapshot
 - **volume-snapshot-delete**  
 Delete a snapshot by ID.  
 **Arguments:**  
@@ -89,7 +89,7 @@ List actions for a specific volume. Supports pagination.
 Resize a volume.  
 **Arguments:**  
   - `VolumeID` (string, required): The ID of the volume to resize  
-  - `SizeGigaBytes` (number, required): New size in GiB  
+  - `SizeGigaBytes` (number, required): New size in GB  
   - `Region` (string, required): Region slug where the volume exists
 
 ---

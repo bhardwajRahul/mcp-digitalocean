@@ -23,7 +23,7 @@ func TestVolumeActionTools(t *testing.T) {
 	}, v.ID)
 
 	t.Logf("[Get] Volume after attach:")
-	attached := callTool[godo.Volume](t, "volume-get", map[string]any{"VolumeID": v.ID})
+	attached := callTool[godo.Volume](t, "volume-get", map[string]any{"ID": v.ID})
 	require.Contains(t, attached.DropletIDs, d.ID, "volume should list droplet after attach")
 	t.Logf("      ID: %s", attached.ID)
 	t.Logf("      DropletIDs: %v", attached.DropletIDs)
@@ -55,13 +55,13 @@ func TestVolumeActionTools(t *testing.T) {
 	}, v.ID)
 
 	t.Logf("[Get] Volume after detach:")
-	detached := callTool[godo.Volume](t, "volume-get", map[string]any{"VolumeID": v.ID})
+	detached := callTool[godo.Volume](t, "volume-get", map[string]any{"ID": v.ID})
 	require.NotContains(t, detached.DropletIDs, d.ID, "volume should not list droplet after detach")
 	t.Logf("      ID: %s", detached.ID)
 	t.Logf("      DropletIDs: %v", detached.DropletIDs)
 
 	newSize := float64(defaultVolumeSize + 1)
-	t.Logf("[Action] Resizing volume %s to %.0f GiB (region %s)...", v.ID, newSize, v.Region.Slug)
+	t.Logf("[Action] Resizing volume %s to %.0f GB (region %s)...", v.ID, newSize, v.Region.Slug)
 	triggerVolumeActionAndWait(t, "volume-resize", map[string]any{
 		"VolumeID":      v.ID,
 		"SizeGigaBytes": newSize,
@@ -69,7 +69,7 @@ func TestVolumeActionTools(t *testing.T) {
 	}, v.ID)
 
 	t.Logf("[Get] Volume after resize:")
-	resized := callTool[godo.Volume](t, "volume-get", map[string]any{"VolumeID": v.ID})
+	resized := callTool[godo.Volume](t, "volume-get", map[string]any{"ID": v.ID})
 	require.GreaterOrEqual(t, resized.SizeGigaBytes, int64(newSize), "volume size should reflect resize")
 	t.Logf("      ID: %s", resized.ID)
 	t.Logf("      SizeGigaBytes: %d", resized.SizeGigaBytes)
