@@ -27,14 +27,10 @@ const (
 	maxCacheEntries = 1024
 )
 
-// cachedAuth holds a resolved OW client and the metadata needed to clean up
-// the access key later.
+// cachedAuth holds a resolved OW client and its expiry metadata.
 type cachedAuth struct {
 	ow         *owClient
-	gc         *godo.Client // retained for shutdown cleanup (no request context available)
 	nsName     string
-	nsID       string
-	keyID      string
 	validUntil time.Time
 }
 
@@ -151,10 +147,7 @@ func (r *OWResolver) resolveAndCache(ctx context.Context, ck, namespaceID string
 
 	entry := &cachedAuth{
 		ow:         ow,
-		gc:         gc,
 		nsName:     ns.Namespace,
-		nsID:       namespaceID,
-		keyID:      key.ID,
 		validUntil: time.Now().Add(24*time.Hour - keyRefreshBuffer),
 	}
 
@@ -202,23 +195,6 @@ func (r *OWResolver) sweepExpiredLocked() {
 			delete(r.items, e.key)
 		}
 		elem = prev
-	}
-}
-
-// Cleanup makes a best-effort attempt to delete all access keys created by
-// this session. Call during process shutdown.
-func (r *OWResolver) Cleanup(ctx context.Context) {
-	r.mu.Lock()
-	entries := make([]*cachedAuth, 0, r.order.Len())
-	for elem := r.order.Front(); elem != nil; elem = elem.Next() {
-		entries = append(entries, elem.Value.(*lruEntry).auth)
-	}
-	r.items = make(map[string]*list.Element)
-	r.order.Init()
-	r.mu.Unlock()
-
-	for _, entry := range entries {
-		entry.gc.Functions.DeleteAccessKey(ctx, entry.nsID, entry.keyID) //nolint:errcheck
 	}
 }
 

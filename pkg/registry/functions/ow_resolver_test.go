@@ -192,23 +192,6 @@ func TestOWResolver_OrphanCleanup(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestOWResolver_ShutdownCleanup(t *testing.T) {
-	resolver, mock := setupResolverTest(t)
-	expectFullResolve(mock, "ns-uuid-1")
-
-	_, _, err := resolver.Resolve(context.Background(), "ns-uuid-1")
-	require.NoError(t, err)
-
-	// Cleanup should delete the cached key.
-	mock.EXPECT().DeleteAccessKey(gomock.Any(), "ns-uuid-1", "key-id-1").Return(nil, nil)
-
-	resolver.Cleanup(context.Background())
-
-	resolver.mu.Lock()
-	require.Equal(t, 0, len(resolver.items))
-	resolver.mu.Unlock()
-}
-
 func TestOWResolver_GetNamespaceError(t *testing.T) {
 	resolver, mock := setupResolverTest(t)
 

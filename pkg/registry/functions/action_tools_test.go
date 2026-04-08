@@ -29,8 +29,6 @@ func newTestResolver(t *testing.T, ts *httptest.Server, nsID, nsName string) *OW
 		auth: &cachedAuth{
 			ow:         ow,
 			nsName:     nsName,
-			nsID:       nsID,
-			keyID:      "test-key-id",
 			validUntil: time.Now().Add(1 * time.Hour),
 		},
 	}
