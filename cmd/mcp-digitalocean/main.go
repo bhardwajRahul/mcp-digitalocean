@@ -148,13 +148,21 @@ func main() {
 	}
 
 	// register the tools.
-	err := registry.Register(
-		ctx,
+	cleanup, err := registry.Register(
 		logger,
 		svr,
 		getClientFn,
 		services...,
 	)
+	if err != nil {
+		logger.Error("Failed to register tools: " + err.Error())
+		os.Exit(1)
+	}
+	defer func() {
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		cleanup(cleanupCtx)
+	}()
 
 	// start our server.
 	err = runServer(ctx, svr, logger, *bindAddr, transport)

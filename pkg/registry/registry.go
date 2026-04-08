@@ -13,11 +13,11 @@ import (
 	"mcp-digitalocean/pkg/registry/docr"
 	"mcp-digitalocean/pkg/registry/doks"
 	"mcp-digitalocean/pkg/registry/droplet"
+	"mcp-digitalocean/pkg/registry/functions"
 	genaimodelcatalog "mcp-digitalocean/pkg/registry/genai-modelcatalog"
 	"mcp-digitalocean/pkg/registry/insights"
 	"mcp-digitalocean/pkg/registry/marketplace"
 	"mcp-digitalocean/pkg/registry/networking"
-	"mcp-digitalocean/pkg/registry/serverless"
 	"mcp-digitalocean/pkg/registry/spaces"
 	"mcp-digitalocean/pkg/registry/volumes"
 
@@ -143,13 +143,14 @@ func registerDOCRTools(s *server.MCPServer, getClient getClientFn) error {
 	return nil
 }
 
-func registerServerlessTools(ctx context.Context, s *server.MCPServer, getClient getClientFn) error {
-	s.AddTools(serverless.NewNamespaceTool(getClient).Tools()...)
-	s.AddTools(serverless.NewTriggerTool(getClient).Tools()...)
-
-	accessKeySvc := serverless.NewGodoAccessKeyService(getClient)
-	s.AddTools(serverless.NewFunctionTool(ctx, getClient, serverless.WithAccessKeyService(accessKeySvc)).Tools()...)
-	return nil
+func registerFunctionsTools(s *server.MCPServer, getClient getClientFn) (*functions.OWResolver, error) {
+	resolver := functions.NewOWResolver(getClient)
+	s.AddTools(functions.NewNamespaceTool(getClient).Tools()...)
+	s.AddTools(functions.NewTriggerTool(getClient).Tools()...)
+	s.AddTools(functions.NewActionTool(resolver).Tools()...)
+	s.AddTools(functions.NewPackageTool(resolver).Tools()...)
+	s.AddTools(functions.NewActivationTool(resolver).Tools()...)
+	return resolver, nil
 }
 
 func registerDatabasesTools(s *server.MCPServer, getClient getClientFn) error {
@@ -166,6 +167,9 @@ func registerDatabasesTools(s *server.MCPServer, getClient getClientFn) error {
 	return nil
 }
 
+// CleanupFunc performs best-effort resource cleanup during shutdown.
+type CleanupFunc func(ctx context.Context)
+
 func registerVolumesTools(s *server.MCPServer, getClient getClientFn) error {
 	s.AddTools(volumes.NewVolumeTool(getClient).Tools()...)
 	s.AddTools(volumes.NewVolumeActionsTool(getClient).Tools()...)
@@ -174,40 +178,44 @@ func registerVolumesTools(s *server.MCPServer, getClient getClientFn) error {
 
 // Register registers the set of tools for the specified services with the MCP server.
 // We either register a subset of tools of the services are specified, or we register all tools if no services are specified.
-// The ctx parameter controls the lifetime of background goroutines (e.g., cache cleanup).
-func Register(ctx context.Context, logger *slog.Logger, s *server.MCPServer, getClient getClientFn, servicesToActivate ...string) error {
+// The returned CleanupFunc should be called during shutdown to release resources
+// (e.g., delete ephemeral access keys). It is safe to call even if nil.
+func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, servicesToActivate ...string) (CleanupFunc, error) {
 	if len(servicesToActivate) == 0 {
 		logger.Warn("no services specified, loading all supported services")
 		for k := range supportedServices {
 			servicesToActivate = append(servicesToActivate, k)
 		}
 	}
+
+	var cleanups []CleanupFunc
+
 	for _, svc := range servicesToActivate {
 		logger.Debug(fmt.Sprintf("Registering tool and resources for service: %s", svc))
 		switch svc {
 		case "apps":
 			if err := registerAppTools(s, getClient); err != nil {
-				return fmt.Errorf("failed to register app tools: %w", err)
+				return nil, fmt.Errorf("failed to register app tools: %w", err)
 			}
 		case "networking":
 			if err := registerNetworkingTools(s, getClient); err != nil {
-				return fmt.Errorf("failed to register networking tools: %w", err)
+				return nil, fmt.Errorf("failed to register networking tools: %w", err)
 			}
 		case "droplets":
 			if err := registerDropletTools(s, getClient); err != nil {
-				return fmt.Errorf("failed to register droplets tool: %w", err)
+				return nil, fmt.Errorf("failed to register droplets tool: %w", err)
 			}
 		case "accounts":
 			if err := registerAccountTools(s, getClient); err != nil {
-				return fmt.Errorf("failed to register account tools: %w", err)
+				return nil, fmt.Errorf("failed to register account tools: %w", err)
 			}
 		case "spaces":
 			if err := registerSpacesTools(s, getClient); err != nil {
-				return fmt.Errorf("failed to register spaces tools: %w", err)
+				return nil, fmt.Errorf("failed to register spaces tools: %w", err)
 			}
 		case "databases":
 			if err := registerDatabasesTools(s, getClient); err != nil {
-				return fmt.Errorf("failed to register databases tools: %w", err)
+				return nil, fmt.Errorf("failed to register databases tools: %w", err)
 			}
 		case "marketplace":
 			if err := registerMarketplaceTools(s, getClient); err != nil {
@@ -219,15 +227,15 @@ func Register(ctx context.Context, logger *slog.Logger, s *server.MCPServer, get
 			}
 		case "insights":
 			if err := registerInsightsTools(s, getClient); err != nil {
-				return fmt.Errorf("failed to register insights tools: %w", err)
+				return nil, fmt.Errorf("failed to register insights tools: %w", err)
 			}
 		case "doks":
 			if err := registerDOKSTools(s, getClient); err != nil {
-				return fmt.Errorf("failed to register DOKS tools: %w", err)
+				return nil, fmt.Errorf("failed to register DOKS tools: %w", err)
 			}
 		case "docr":
 			if err := registerDOCRTools(s, getClient); err != nil {
-				return fmt.Errorf("failed to register DOCR tools: %w", err)
+				return nil, fmt.Errorf("failed to register DOCR tools: %w", err)
 			}
 		case "volumes":
 			if err := registerVolumesTools(s, getClient); err != nil {
@@ -237,17 +245,24 @@ func Register(ctx context.Context, logger *slog.Logger, s *server.MCPServer, get
 			if err := registerFunctionsTools(s, getClient); err != nil {
 				return fmt.Errorf("failed to register functions tools: %w", err)
 			}
+			cleanups = append(cleanups, resolver.Cleanup)
 		default:
-			return fmt.Errorf("unsupported service: %s, supported service are: %v", svc, setToString(supportedServices))
+			return nil, fmt.Errorf("unsupported service: %s, supported service are: %v", svc, setToString(supportedServices))
 		}
 	}
 
 	// Common tools are always registered because they provide common functionality for all services such as region resources
 	if err := registerCommonTools(s, getClient); err != nil {
-		return fmt.Errorf("failed to register common tools: %w", err)
+		return nil, fmt.Errorf("failed to register common tools: %w", err)
 	}
 
-	return nil
+	cleanup := func(ctx context.Context) {
+		for _, fn := range cleanups {
+			fn(ctx)
+		}
+	}
+
+	return cleanup, nil
 }
 
 func setToString(set map[string]struct{}) string {
