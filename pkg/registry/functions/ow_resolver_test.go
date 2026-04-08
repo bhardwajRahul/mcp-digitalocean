@@ -14,7 +14,6 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-
 func mockClient(mock *MockFunctionsService) func(ctx context.Context) (*godo.Client, error) {
 	return func(ctx context.Context) (*godo.Client, error) {
 		return &godo.Client{Functions: mock}, nil
