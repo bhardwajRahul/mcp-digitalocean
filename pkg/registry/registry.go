@@ -167,9 +167,6 @@ func registerDatabasesTools(s *server.MCPServer, getClient getClientFn) error {
 	return nil
 }
 
-// CleanupFunc performs best-effort resource cleanup during shutdown.
-type CleanupFunc func(ctx context.Context)
-
 func registerVolumesTools(s *server.MCPServer, getClient getClientFn) error {
 	s.AddTools(volumes.NewVolumeTool(getClient).Tools()...)
 	s.AddTools(volumes.NewVolumeActionsTool(getClient).Tools()...)
