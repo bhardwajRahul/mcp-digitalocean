@@ -134,8 +134,6 @@ func parseLlmsTxt(text string) *DocsIndex {
 	var sections []string
 	currentSection := "General"
 
-	entryRe := regexp.MustCompile(`^-\s+\[([^\]]+)\]\(([^)]+)\)(?::\s*(.+))?$`)
-
 	for _, line := range strings.Split(text, "\n") {
 		trimmed := strings.TrimSpace(line)
 
@@ -357,6 +355,7 @@ func (d *DocsClient) FindQuickstart(service string) (string, string, error) {
 	return "", "", fmt.Errorf("no quickstart found for service %q", service)
 }
 
+var entryRe = regexp.MustCompile(`^-\s+\[([^\]]+)\]\(([^)]+)\)(?::\s*(.+))?$`)
 var excessiveNewlines = regexp.MustCompile(`\n{3,}`)
 var htmlTags = regexp.MustCompile(`<[^>]+>`)
 
