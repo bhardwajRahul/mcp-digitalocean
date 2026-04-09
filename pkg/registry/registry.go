@@ -231,7 +231,7 @@ func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, s
 			}
 		case "docr":
 			if err := registerDOCRTools(s, getClient); err != nil {
-				return nil, fmt.Errorf("failed to register DOCR tools: %w", err)
+				return fmt.Errorf("failed to register DOCR tools: %w", err)
 			}
 		case "volumes":
 			if err := registerVolumesTools(s, getClient); err != nil {
