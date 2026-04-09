@@ -94,10 +94,17 @@ func TestModelCatalogGetCard(t *testing.T) {
 	t.Logf("getting model card for UUID: %s", testUUID)
 
 	model := callTool[struct {
-		UUID              string          `json:"uuid"`
-		Name              string          `json:"name"`
-		Agreement         *godo.Agreement `json:"agreement,omitempty"`
-		ModelAvailability string          `json:"model_availability,omitempty"`
+		UUID              string                `json:"uuid"`
+		Name              string                `json:"name"`
+		Description       string                `json:"description,omitempty"`
+		Provider          string                `json:"provider,omitempty"`
+		Agreement         *godo.Agreement       `json:"agreement,omitempty"`
+		ModelAvailability string                `json:"model_availability,omitempty"`
+		ContextWindow     string                `json:"context_window,omitempty"`
+		Capabilities      []string              `json:"capabilities,omitempty"`
+		Modalities        *godo.ModelModalities `json:"modalities,omitempty"`
+		ParameterCount    float64               `json:"parameter_count,omitempty"`
+		Type              string                `json:"type,omitempty"`
 	}](t, "genai-model-catalog-get-card", map[string]interface{}{
 		"ModelUUID": testUUID,
 	})
@@ -106,8 +113,30 @@ func TestModelCatalogGetCard(t *testing.T) {
 	require.NotEmpty(t, model.Name, "model should have a name")
 	require.Contains(t, strings.ToLower(model.Name), strings.ToLower(searchQuery), "model name should contain the search query")
 	t.Logf("successfully retrieved model card: %s", model.Name)
+
+	if model.Description != "" {
+		t.Logf("description: %s", model.Description)
+	}
+	if model.Provider != "" {
+		t.Logf("provider: %s", model.Provider)
+	}
 	if model.ModelAvailability != "" {
 		t.Logf("model availability: %s", model.ModelAvailability)
+	}
+	if model.ContextWindow != "" {
+		t.Logf("context window: %s", model.ContextWindow)
+	}
+	if len(model.Capabilities) > 0 {
+		t.Logf("capabilities: %v", model.Capabilities)
+	}
+	if model.ParameterCount > 0 {
+		t.Logf("parameter count: %.1fB", model.ParameterCount)
+	}
+	if model.Type != "" {
+		t.Logf("type: %s", model.Type)
+	}
+	if model.Modalities != nil {
+		t.Logf("modalities - input: %v, output: %v", model.Modalities.Input, model.Modalities.Output)
 	}
 
 	// Verify model metadata structure
@@ -177,10 +206,17 @@ func TestModelCatalogWorkflow(t *testing.T) {
 		}
 
 		model := callTool[struct {
-			UUID              string          `json:"uuid"`
-			Name              string          `json:"name"`
-			Agreement         *godo.Agreement `json:"agreement,omitempty"`
-			ModelAvailability string          `json:"model_availability,omitempty"`
+			UUID              string                `json:"uuid"`
+			Name              string                `json:"name"`
+			Description       string                `json:"description,omitempty"`
+			Provider          string                `json:"provider,omitempty"`
+			Agreement         *godo.Agreement       `json:"agreement,omitempty"`
+			ModelAvailability string                `json:"model_availability,omitempty"`
+			ContextWindow     string                `json:"context_window,omitempty"`
+			Capabilities      []string              `json:"capabilities,omitempty"`
+			Modalities        *godo.ModelModalities `json:"modalities,omitempty"`
+			ParameterCount    float64               `json:"parameter_count,omitempty"`
+			Type              string                `json:"type,omitempty"`
 		}](t, "genai-model-catalog-get-card", map[string]interface{}{
 			"ModelUUID": uuid,
 		})
@@ -191,6 +227,12 @@ func TestModelCatalogWorkflow(t *testing.T) {
 			t.Logf("  - %s (availability: %s)", model.Name, model.ModelAvailability)
 		} else {
 			t.Logf("  - %s", model.Name)
+		}
+		if model.Provider != "" {
+			t.Logf("    provider: %s", model.Provider)
+		}
+		if model.ContextWindow != "" {
+			t.Logf("    context window: %s", model.ContextWindow)
 		}
 	}
 

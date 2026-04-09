@@ -175,6 +175,7 @@ The easiest way to get started is to use DigitalOcean's hosted MCP services. Eac
 | insights     | https://insights.mcp.digitalocean.com/mcp   | Monitors your resources, endpoints and alert you when they're slow, unavailable, or SSL certificates are expiring. |
 | marketplace  | https://marketplace.mcp.digitalocean.com/mcp| Discover and manage DigitalOcean Marketplace applications. |
 | networking   | https://networking.mcp.digitalocean.com/mcp | Manage domains, DNS records, certificates, firewalls, load balancers, reserved IPs, BYOIP Prefixes, VPCs, and CDNs. |
+| functions    | https://functions.mcp.digitalocean.com/mcp  | Manage serverless function namespaces, actions, packages, triggers, and activations.  |
 | spaces       | https://spaces.mcp.digitalocean.com/mcp     | DigitalOcean Spaces object storage and Spaces access keys for S3-compatible storage. |
 | docs         | https://docs.mcp.digitalocean.com/mcp       | Search and retrieve DigitalOcean public documentation. No API token required. |
 
@@ -592,6 +593,7 @@ Each service provides a detailed README describing all available tools, resource
 - [Insights Service](pkg/registry/insights/README.md)
 - [Spaces Service](pkg/registry/spaces/README.md)
 - [Marketplace Service](pkg/registry/marketplace/README.md)
+- [Functions Service](pkg/registry/functions/README.md)
 - [DOKS Service](pkg/registry/doks/README.md)
 - [DOCR Service](pkg/registry/docr/README.md)
 - [Docs Service](pkg/registry/docs/README.md)

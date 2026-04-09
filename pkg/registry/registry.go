@@ -14,11 +14,13 @@ import (
 	"mcp-digitalocean/pkg/registry/docs"
 	"mcp-digitalocean/pkg/registry/doks"
 	"mcp-digitalocean/pkg/registry/droplet"
+	"mcp-digitalocean/pkg/registry/functions"
 	genaimodelcatalog "mcp-digitalocean/pkg/registry/genai-modelcatalog"
 	"mcp-digitalocean/pkg/registry/insights"
 	"mcp-digitalocean/pkg/registry/marketplace"
 	"mcp-digitalocean/pkg/registry/networking"
 	"mcp-digitalocean/pkg/registry/spaces"
+	"mcp-digitalocean/pkg/registry/volumes"
 
 	"github.com/digitalocean/godo"
 	"github.com/mark3labs/mcp-go/server"
@@ -40,6 +42,8 @@ var supportedServices = map[string]struct{}{
 	"doks":               {},
 	"docr":               {},
 	"docs":               {},
+	"volumes":            {},
+	"functions":          {},
 }
 
 // registerAppTools registers the app platform tools with the MCP server.
@@ -149,6 +153,16 @@ func registerDOCRTools(s *server.MCPServer, getClient getClientFn) error {
 	return nil
 }
 
+func registerFunctionsTools(s *server.MCPServer, getClient getClientFn) error {
+	resolver := functions.NewOWResolver(getClient)
+	s.AddTools(functions.NewNamespaceTool(getClient).Tools()...)
+	s.AddTools(functions.NewTriggerTool(getClient).Tools()...)
+	s.AddTools(functions.NewActionTool(resolver).Tools()...)
+	s.AddTools(functions.NewPackageTool(resolver).Tools()...)
+	s.AddTools(functions.NewActivationTool(resolver).Tools()...)
+	return nil
+}
+
 func registerDatabasesTools(s *server.MCPServer, getClient getClientFn) error {
 	s.AddTools(dbaas.NewClusterTool(getClient).Tools()...)
 	s.AddTools(dbaas.NewFirewallTool(getClient).Tools()...)
@@ -163,6 +177,12 @@ func registerDatabasesTools(s *server.MCPServer, getClient getClientFn) error {
 	return nil
 }
 
+func registerVolumesTools(s *server.MCPServer, getClient getClientFn) error {
+	s.AddTools(volumes.NewVolumeTool(getClient).Tools()...)
+	s.AddTools(volumes.NewVolumeActionsTool(getClient).Tools()...)
+	return nil
+}
+
 // Register registers the set of tools for the specified services with the MCP server.
 // We either register a subset of tools of the services are specified, or we register all tools if no services are specified.
 func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, servicesToActivate ...string) error {
@@ -172,6 +192,7 @@ func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, s
 			servicesToActivate = append(servicesToActivate, k)
 		}
 	}
+
 	for _, svc := range servicesToActivate {
 		logger.Debug(fmt.Sprintf("Registering tool and resources for service: %s", svc))
 		switch svc {
@@ -222,6 +243,14 @@ func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, s
 		case "docs":
 			if err := registerDocsTools(s); err != nil {
 				return fmt.Errorf("failed to register docs tools: %w", err)
+			}
+		case "volumes":
+			if err := registerVolumesTools(s, getClient); err != nil {
+				return fmt.Errorf("failed to register volumes tools: %w", err)
+			}
+		case "functions":
+			if err := registerFunctionsTools(s, getClient); err != nil {
+				return fmt.Errorf("failed to register functions tools: %w", err)
 			}
 		default:
 			return fmt.Errorf("unsupported service: %s, supported service are: %v", svc, setToString(supportedServices))

@@ -26,6 +26,7 @@ const (
 	// Configuration Defaults
 	defaultDropletSize   = "s-1vcpu-1gb"
 	defaultTestImageSlug = "ubuntu-22-04-x64"
+	defaultVolumeSize    = 1
 
 	// Polling Intervals
 	defaultPollInterval  = 2 * time.Second
@@ -33,6 +34,7 @@ const (
 
 	// Timeouts
 	defaultActionTimeout     = 5 * time.Minute
+	imageTransferTimeout     = 15 * time.Minute
 	dropletActiveTimeout     = 10 * time.Minute
 	dropletDeleteTimeout     = 2 * time.Minute
 	imageAvailableTimeout    = 5 * time.Minute
@@ -108,7 +110,23 @@ func triggerActionAndWait(t *testing.T, tool string, args map[string]any, resour
 
 func triggerImageActionAndWait(t *testing.T, tool string, args map[string]any, imageID int) {
 	t.Helper()
-	triggerGenericActionAndWait(t, tool, args, imageID, testhelpers.WaitForImageAction, defaultActionTimeout)
+	triggerGenericActionAndWait(t, tool, args, imageID, testhelpers.WaitForImageAction, imageTransferTimeout)
+}
+
+func triggerVolumeActionAndWait(t *testing.T, tool string, args map[string]any, volumeID string) godo.Action {
+	t.Helper()
+	ctx := context.Background()
+	gclient, err := testhelpers.MustGodoClient(ctx, t.Name())
+	require.NoError(t, err)
+
+	action := callTool[godo.Action](t, tool, args)
+	require.NotZero(t, action.ID, "volume action ID should not be zero")
+	LogActionStatus(t, tool, action)
+
+	final, err := testhelpers.WaitForStorageAction(ctx, gclient, volumeID, action.ID, defaultPollInterval, defaultActionTimeout)
+	require.NoError(t, err, "volume action %s failed to complete", tool)
+	LogActionStatus(t, tool, *final)
+	return *final
 }
 
 func callTool[T any](t *testing.T, name string, args map[string]any) T {
@@ -263,12 +281,15 @@ func deleteResourceWithGodo(t *testing.T, ctx context.Context, gclient *godo.Cli
 
 	var err error
 	var idInt int
+	var idString string
 
 	switch v := id.(type) {
 	case int:
 		idInt = v
 	case float64:
 		idInt = int(v)
+	case string:
+		idString = v
 	default:
 		t.Logf("[Delete] Failed %s %s: invalid ID type %T", resourceType, formatID(id), id)
 		return
@@ -280,7 +301,7 @@ func deleteResourceWithGodo(t *testing.T, ctx context.Context, gclient *godo.Cli
 	case "image", "snapshot":
 		_, err = gclient.Images.Delete(ctx, idInt)
 	case "volume":
-		_, err = gclient.Storage.DeleteVolume(ctx, fmt.Sprintf("%d", idInt))
+		_, err = gclient.Storage.DeleteVolume(ctx, idString)
 	default:
 		t.Logf("[Delete] Failed %s %s: unsupported resource type", resourceType, formatID(id))
 		return
@@ -674,4 +695,26 @@ func formatID(id any) string {
 	default:
 		return fmt.Sprintf("%v", v)
 	}
+}
+
+func CreateTestVolume(t *testing.T, namePrefix string) godo.Volume {
+	t.Helper()
+
+	volumeName := fmt.Sprintf("%s-%d", namePrefix, time.Now().Unix())
+	region := selectRegion(t)
+	size := defaultVolumeSize
+
+	t.Logf("Creating Volume: %s (Region: %s, Size: %d)...", volumeName, region, size)
+
+	volume := callTool[godo.Volume](t, "volume-create", map[string]any{
+		"Name":          volumeName,
+		"Region":        region,
+		"SizeGigaBytes": size,
+	})
+
+	RegisterResourceCleanup(t, "volume", volume.ID)
+
+	t.Logf("[Created] Volume %s: Name=%s, Region=%s Size=%d", volume.ID, volume.Name, volume.Region.Slug, volume.SizeGigaBytes)
+
+	return volume
 }

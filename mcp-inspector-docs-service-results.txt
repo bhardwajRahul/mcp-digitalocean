@@ -1,0 +1,262 @@
+mcp-digitalocean — MCP Inspector CLI (--services docs)
+Generated: 2026-03-21T10:44:09-04:00
+Host: Linux t480s 6.19.8-200.fc43.x86_64 #1 SMP PREEMPT_DYNAMIC Fri Mar 13 22:06:06 UTC 2026 x86_64 GNU/Linux
+Go: go version go1.25.8 X:nodwarf5 linux/amd64
+
+=== Build ===
+go build -o /tmp/mcp-digitalocean ./cmd/mcp-digitalocean/
+-rwxr-xr-x. 1 dfinn dfinn 15616241 Mar 21 10:44 /tmp/mcp-digitalocean
+
+
+=== tools/list ===
+Command: npx -y @modelcontextprotocol/inspector --cli -- /tmp/mcp-digitalocean --services docs --digitalocean-api-token "dop_v1_test_placeholder_for_inspector" --method tools/list
+
+{
+  "tools": [
+    {
+      "name": "docs-find-for-service",
+      "description": "Given a DigitalOcean service name (e.g., \"droplets\", \"managed kubernetes\", \"app platform\"), return a list of relevant documentation pages with titles and URLs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "Service": {
+            "description": "DigitalOcean service name (e.g., \"droplets\", \"kubernetes\", \"app platform\", \"databases\")",
+            "type": "string"
+          }
+        },
+        "required": [
+          "Service"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "docs-get-page",
+      "description": "Fetch the full markdown content of a specific DigitalOcean docs page. Returns clean markdown suitable for LLM consumption.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "URL": {
+            "description": "Full URL or path of the docs page (e.g., https://docs.digitalocean.com/products/droplets/getting-started/quickstart/ or /products/droplets/getting-started/quickstart/)",
+            "type": "string"
+          }
+        },
+        "required": [
+          "URL"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "docs-get-quickstart",
+      "description": "Get the quickstart or getting-started guide for a DigitalOcean service. Returns the full content as clean markdown.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "Service": {
+            "description": "DigitalOcean service name (e.g., \"droplets\", \"kubernetes\", \"app platform\")",
+            "type": "string"
+          }
+        },
+        "required": [
+          "Service"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "docs-search",
+      "description": "Full-text search across DigitalOcean documentation. Returns ranked results with title, URL, and content snippet.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "Limit": {
+            "default": 10,
+            "description": "Maximum number of results to return",
+            "type": "number"
+          },
+          "Query": {
+            "description": "Search query string",
+            "type": "string"
+          }
+        },
+        "required": [
+          "Query"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "region-list",
+      "description": "List all available regions with features and droplet size availability. Supports pagination.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "Page": {
+            "default": 1,
+            "description": "Page number",
+            "type": "number"
+          },
+          "PerPage": {
+            "default": 50,
+            "description": "Items per page",
+            "type": "number"
+          }
+        },
+        "required": []
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      }
+    }
+  ]
+}
+(exit code: 0)
+
+=== tools/call docs-search ===
+Command: npx -y @modelcontextprotocol/inspector --cli -- /tmp/mcp-digitalocean --services docs --digitalocean-api-token "dop_v1_test_placeholder_for_inspector" --method tools/call --tool-name docs-search --tool-arg Query=droplet --tool-arg Limit=3
+
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Found 3 result(s) for \"droplet\":\n\n1. Can I use my Droplet's IP as a Reserved IP?\n   https://docs.digitalocean.com/support/can-i-use-my-droplets-ip-as-a-reserved-ip/index.html.md\n   You cannot convert a Droplet IP address into a Reserved IP.\n\n2. How do I transfer a Droplet to someone else?\n   https://docs.digitalocean.com/support/how-do-i-transfer-a-droplet-to-someone-else/index.html.md\n   You can transfer snapshots of Droplets to others by email address or by team.\n\n3. How do I manually back up my Droplet?\n   https://docs.digitalocean.com/support/how-do-i-manually-back-up-my-droplet/index.html.md\n   Manually back up a Droplet by creating a snapshot, converting an automatic backup into a snapshot, or using third-party tools like SnapShooter or `rsync` to back up specific data.\n\n"
+    }
+  ]
+}
+(exit code: 0)
+
+=== tools/call docs-find-for-service ===
+Command: npx -y @modelcontextprotocol/inspector --cli -- /tmp/mcp-digitalocean --services docs --digitalocean-api-token "dop_v1_test_placeholder_for_inspector" --method tools/call --tool-name docs-find-for-service --tool-arg Service=droplets
+
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "Documentation for \"droplets\" (96 pages):\n\n### General\n- Droplets Support: https://docs.digitalocean.com/products/droplets/support/index.html.md\n  Get help with technical support and answers to frequently asked questions.\n\n### Getting Started with Droplets\n- Droplet Quickstart: https://docs.digitalocean.com/products/droplets/getting-started/quickstart/index.html.md\n  Just the essentials to go from zero to working in a few minutes.\n- Set up a Production-Ready Droplet: https://docs.digitalocean.com/products/droplets/getting-started/recommended-droplet-setup/index.html.md\n  Create a new Droplet with our recommended configuration for improved security, reliability, and monitoring.\n- Recommended Drivers and Software for DigitalOcean Gradient™ AI GPU Droplets: https://docs.digitalocean.com/products/droplets/getting-started/recommended-gpu-setup/index.html.md\n  Follow our recommended setup for drivers and software on GPU Droplets to use their GPUs.\n\n### Droplet How-Tos\n- How to Create a Droplet: https://docs.digitalocean.com/products/droplets/how-to/create/index.html.md\n  Create Droplets and customize the image, plan, authentication method, and quantity of Droplets you want.\n- How to Provide User Data During Droplet Creation: https://docs.digitalocean.com/products/droplets/how-to/provide-user-data/index.html.md\n  Automate Droplet configuration by providing user data to a Droplet during creation.\n- How to Connect to Droplets with the Droplet Console: https://docs.digitalocean.com/products/droplets/how-to/connect-with-console/index.html.md\n  Use the Droplet Console from a web browser to connect to Droplets for native-like terminal access to your remote server.\n- How to Transfer Files to Droplets With FileZilla: https://docs.digitalocean.com/products/droplets/how-to/transfer-files/index.html.md\n  Securely move files between Droplets and your local machine using FileZilla, an open-source FTP client.\n- How to Tag Droplets: https://docs.digitalocean.com/products/droplets/how-to/tag/index.html.md\n  Organize Droplets with tags to group and filter Droplets by role, automatically include Droplets in firewall or load balancer configurations, or target multiple Droplets at once with the API.\n- How to Track Performance with Droplet Graphs: https://docs.digitalocean.com/products/droplets/how-to/track-performance/index.html.md\n  Monitor Droplet performance with default graphs for bandwidth, CPU usage, and disk I/O. Install the DigitalOcean metrics agent for extended graphs like CPU load average, memory usage, and disk usage.\n- How to Resize Droplets for Vertical Scaling: https://docs.digitalocean.com/products/droplets/how-to/resize/index.html.md\n  Resize a Droplet to change the amount of CPU and RAM a Droplet has, optionally add additional disk space, or change to a different type of Droplet plan or CPU.\n- How to Use Droplet Autoscale Pools for Automatic Horizontal Scaling: https://docs.digitalocean.com/products/droplets/how-to/use-autoscale-pools/index.html.md\n  Create a Droplet autoscale pool to enable automatic horizontal scaling based on resource utilization or a fixed size.\n- How to Access Information about a Droplet using the Metadata API: https://docs.digitalocean.com/products/droplets/how-to/access-metadata/index.html.md\n  Use the Droplet metadata service to programmatically query a Droplet for information about itself.\n- How to Rebuild Droplets: https://docs.digitalocean.com/products/droplets/how-to/rebuild/index.html.md\n  Overwrite the entirety of a Droplet's disk with an image you select.\n- How to Install or Uninstall the DigitalOcean Droplet Agent: https://docs.digitalocean.com/products/droplets/how-to/manage-agent/index.html.md\n  Install the Droplet agent on older Droplets to enable features like the Droplet Console, or uninstall the agent to remove access.\n- How to Destroy a Droplet from the DigitalOcean Control Panel: https://docs.digitalocean.com/products/droplets/how-to/destroy/index.html.md\n  Destroy a Droplet to permanently and irreversibly destroy the Droplet and its contents.\n- How to Create DigitalOcean Gradient™ AI GPU Droplets: https://docs.digitalocean.com/products/droplets/how-to/gpu/create/index.html.md\n  Create GPU Droplets and choose the image, plan, datacenter, authentication method, and additional options.\n- How to Use the Scratch Disk on DigitalOcean Gradient™ AI GPU Droplets: https://docs.digitalocean.com/products/droplets/how-to/gpu/use-scratch-disk/index.html.md\n  Set up automatic mounting for the scratch disk on GPU Droplets.\n- How to Enable GPU Metrics on DigitalOcean Gradient™ AI GPU Droplets with DCGM: https://docs.digitalocean.com/products/droplets/how-to/gpu/enable-metrics/index.html.md\n  Install the NVIDIA Data Center GPU Manager (DCGM) and DCGM Exporter to enable health monitoring, diagnostics, and process statistics for NVIDIA GPUs on GPU Droplets.\n- How to Tune Network Performance on DigitalOcean Gradient™ AI GPU Droplets: https://docs.digitalocean.com/products/droplets/how-to/gpu/tune-networking/index.html.md\n  Configure TCP buffer sizes and jumbo frames on GPU Droplets to maximize network throughput.\n- How to Connect to your Droplet with OpenSSH: https://docs.digitalocean.com/products/droplets/how-to/connect-with-ssh/openssh/index.html.md\n  Use a terminal on a Linux, macOS, or Windows computer to connect to Droplets with SSH.\n- How to Create SSH Keys with OpenSSH on MacOS or Linux: https://docs.digitalocean.com/products/droplets/how-to/add-ssh-keys/create-with-openssh/index.html.md\n  Use OpenSSH to create new SSH keys on MacOS, Linux, or Windows Subsystem for Linux.\n- How to Switch to Internal Kernel Management with the DigitalOcean GrubLoader Kernel: https://docs.digitalocean.com/products/droplets/how-to/kernel/grubloader/index.html.md\n  Use the DigitalOcean GrubLoader kernel to allow a legacy Droplet with external kernel management to use internally-managed kernels.\n- How to Connect to your Droplet with PuTTY on Windows: https://docs.digitalocean.com/products/droplets/how-to/connect-with-ssh/putty/index.html.md\n  Use PuTTY on a Windows computer to connect to Droplets with SSH.\n- How to Create SSH Keys with PuTTY on Windows: https://docs.digitalocean.com/products/droplets/how-to/add-ssh-keys/create-with-putty/index.html.md\n  Use PuTTY to create SSH keys on Windows systems without Bash.\n- How to Upgrade to the Latest Kernel: https://docs.digitalocean.com/products/droplets/how-to/kernel/upgrade/index.html.md\n  Upgrade a Droplet's internal kernel to the latest supported version.\n- How to Boot into a Specific Kernel Version: https://docs.digitalocean.com/products/droplets/how-to/kernel/use-non-default/index.html.md\n  Modify your Droplet to boot into a specific, non-default kernel version.\n- How to Upload an SSH Public Key to an Existing Droplet: https://docs.digitalocean.com/products/droplets/how-to/add-ssh-keys/to-existing-droplet/index.html.md\n  Add an SSH public key to an existing Droplet to be able to log in using that keypair.\n- How to Configure Multi-Node GPU Droplets: https://docs.digitalocean.com/products/droplets/how-to/gpu/configure-multi-node/index.html.md\n  Configure multi-node GPU Droplets, including some manual configuration for NIC addressing.\n- How to Recover Data from Droplets with the Recovery ISO: https://docs.digitalocean.com/products/droplets/how-to/recovery/recovery-iso/index.html.md\n  Use DigitalOcean’s recovery ISO with the Recovery Console to regain access to and perform data recovery operations on your Droplet, like getting access to an interactive shell, running fsck, or chrooting into the system.\n- How Recover Access to Droplets using the Recovery Console: https://docs.digitalocean.com/products/droplets/how-to/recovery/recovery-console/index.html.md\n  Use the Recovery Console to recover access to a Droplet. It provides out-of-band access regardless of your network settings. It emulates the access you would have if you were sitting down with a keyboard and monitor attached to the actual server.\n\n### Droplet Concepts\n- Choosing the Right CPU Droplet Plan: https://docs.digitalocean.com/products/droplets/concepts/choosing-a-plan/index.html.md\n  In-depth comparisons of available CPU Droplet plans, including hardware and software, an explanation of shared CPU and dedicated CPU plans, and how to make a data-driven decision on which plan is best for your use case.\n- Considerations when Downsizing to a Smaller Droplet: https://docs.digitalocean.com/products/droplets/concepts/downsizing-considerations/index.html.md\n  Recommendations for downsizing Droplets, including making backups, manging DNS records and IP addresses, and migrating files.\n- Autoscale Pool Concepts: https://docs.digitalocean.com/products/droplets/concepts/autoscale-pools/index.html.md\n  Conceptual and technical details on Droplet autoscale pools, like what happens during scaling events, how the size of the pool is calculated, and when to scale.\n\n### Droplet Details\n- Droplet Features: https://docs.digitalocean.com/products/droplets/details/features/index.html.md\n  We offer CPU and GPU plans for various Linux-based Droplets. Droplets integrate with other DigitalOcean offerings, like autoscale pools, tags, reserved IPs, volumes, cloud firewalls, DigitalOcean Load Balancers, and more.\n- Droplet Pricing: https://docs.digitalocean.com/products/droplets/details/pricing/index.html.md\n  Billing and pricing information for CPU and GPU Droplets, including bandwidth charges.\n- Droplet Availability: https://docs.digitalocean.com/products/droplets/details/availability/index.html.md\n  Regional datacenter availability for Droplets.\n- Linux Images for Droplets: https://docs.digitalocean.com/products/droplets/details/images/index.html.md\n  Reference tables for available Linux images for Droplets, including the image IDs and API/CLI slugs.\n- Droplet Limits: https://docs.digitalocean.com/products/droplets/details/limits/index.html.md\n  Limits and known issues for Droplets.\n- Package Mirrors: https://docs.digitalocean.com/products/droplets/details/mirrors/index.html.md\n  Mirrors of upstream Linux package archives (Debian, Ubuntu) are available at mirrors.digitalocean.com.\n- Image Deprecation Policy: https://docs.digitalocean.com/products/droplets/details/image-deprecation/index.html.md\n  Information on the distribution versions we provide and our policies on updating and deprecating images.\n- Droplet Policies: https://docs.digitalocean.com/products/droplets/details/policies/index.html.md\n  Droplet access and user responsibility.\n- Live Migrations: https://docs.digitalocean.com/products/droplets/details/live-migration/index.html.md\n  An overview of what live migrations are and how they affect users.\n\n### Droplets Support\n- How do I fix a \"system not initialized\" error on multi-GPU Droplets?: https://docs.digitalocean.com/support/how-do-i-fix-a-system-not-initialized-error-on-multi-gpu-droplets/index.html.md\n  Make sure NVIDIA Fabric Manager is running and has the same version number as the GPU drivers.\n- Why am I getting a Droplet autoscale pool error?: https://docs.digitalocean.com/support/why-am-i-getting-a-droplet-autoscale-pool-error/index.html.md\n  There may be an issue with the autoscale pool or Droplet configuration, the VPC network's size, or resource limits on the team or datacenter.\n- How to Troubleshoot Load Balancer Health Check Issues: https://docs.digitalocean.com/support/how-to-troubleshoot-load-balancer-health-check-issues/index.html.md\n  Health checks often fail due to firewalls or misconfigured backend server software.\n- How do I recover access to a Droplet that is at 100% disk usage?: https://docs.digitalocean.com/support/how-do-i-recover-access-to-a-droplet-that-is-at-100-disk-usage/index.html.md\n  Boot the Droplet from the recovery ISO, then connect using the Recovery Console and delete files to free some disk space.\n- How do I create a Droplet without a private IP?: https://docs.digitalocean.com/support/how-do-i-create-a-droplet-without-a-private-ip/index.html.md\n  You can disable the address on your Droplet from the command line or through updating your Droplet's `eth1` interface configuration.\n- How do I access my Droplet's file manager?: https://docs.digitalocean.com/support/how-do-i-access-my-droplets-file-manager/index.html.md\n  You can access your Droplet's file manager by connecting to the Droplet using SSH or the Droplet Console.\n- My Ubuntu Droplet lost all network connectivity after a software update.: https://docs.digitalocean.com/support/my-ubuntu-droplet-lost-all-network-connectivity-after-a-software-update./index.html.md\n  Ensure your Droplet's public and private network interfaces are correctly named `eth0` and `eth1`.\n- Can I use my Droplet's IP as a Reserved IP?: https://docs.digitalocean.com/support/can-i-use-my-droplets-ip-as-a-reserved-ip/index.html.md\n  You cannot convert a Droplet IP address into a Reserved IP.\n- Can I undo restoring a Droplet from a backup?: https://docs.digitalocean.com/support/can-i-undo-restoring-a-droplet-from-a-backup/index.html.md\n  You cannot undo restoring a Droplet from a backup, but you can use an existing snapshot to restore a Droplet to a previous point in time.\n- Why does my Droplet have a US-based IP address when I created it in a different region?: https://docs.digitalocean.com/support/why-does-my-droplet-have-a-us-based-ip-address-when-i-created-it-in-a-different-region/index.html.md\n  All Droplets are assigned IPs that are owned by DigitalOcean, which is headquartered in the US.\n- Why does my Droplet show almost 100% disk usage even after attaching a new volume?: https://docs.digitalocean.com/support/why-does-my-droplet-show-almost-100-disk-usage-even-after-attaching-a-new-volume/index.html.md\n  Attaching a volume adds separate storage and does not increase a Droplet's root disk size.\n- Can I add an old Droplet to a VPC without changing its IP address?: https://docs.digitalocean.com/support/can-i-add-an-old-droplet-to-a-vpc-without-changing-its-ip-address/index.html.md\n  Older Droplets that did not have VPC enabled prior to October 2020 cannot be added to a VPC network without changing its IP address.\n- How do I change my Droplet's SSH port?: https://docs.digitalocean.com/support/how-do-i-change-my-droplets-ssh-port/index.html.md\n  Edit your Droplet's sshd_config file to change its SSH port.\n- Can I preserve my Droplet's IPv4 address when I transfer the Droplet?: https://docs.digitalocean.com/support/can-i-preserve-my-droplets-ipv4-address-when-i-transfer-the-droplet/index.html.md\n  You cannot retain a Droplet's IPv4 when you transfer the Droplet to a new region. Use a reserved IP address to maintain a static IP address.\n- How do I migrate my Droplet to another datacenter region?: https://docs.digitalocean.com/support/how-do-i-migrate-my-droplet-to-another-datacenter-region/index.html.md\n  Take a snapshot of your Droplet and then create new Droplet from the snapshot in the new datacenter.\n- Why can't I create a Droplet from a snapshot?: https://docs.digitalocean.com/support/why-cant-i-create-a-droplet-from-a-snapshot/index.html.md\n  You cannot create Droplets in certain datacenters due to limited capacity. If you have snapshots in a limited capacity datacenter, transfer them to another datacenter to create Droplets from them.\n- Can I downsize a Droplet using a snapshot?: https://docs.digitalocean.com/support/can-i-downsize-a-droplet-using-a-snapshot/index.html.md\n  You cannot downsize a Droplet from a snapshot. Data is not always stored sequentially in memory, so reducing the size of a disk can result in data loss or corruption. When creating a snapshot, the entire disk is imaged, not only the data present on the …\n- Can I choose my Droplet's IP address?: https://docs.digitalocean.com/support/can-i-choose-my-droplets-ip-address/index.html.md\n  You cannot create Droplets with a specific IP address, but you can use reserved IPs for a static address that you can migrate between Droplets.\n- How do I clone or make a copy of a Droplet?: https://docs.digitalocean.com/support/how-do-i-clone-or-make-a-copy-of-a-droplet/index.html.md\n  Create a snapshot of the Droplet, then create a new Droplet from that snapshot.\n- How do I rename a Droplet or change its hostname?: https://docs.digitalocean.com/support/how-do-i-rename-a-droplet-or-change-its-hostname/index.html.md\n  To rename your Droplet, change the Droplet's name in the control panel, then change its hostname from the command line using `hostnamectl` or by editing `/etc/hostname` and `/etc/hosts`.\n- How do I get a Droplet's dedicated IP address?: https://docs.digitalocean.com/support/how-do-i-get-a-droplets-dedicated-ip-address/index.html.md\n  Droplets do not have a dedicated IP address, but you can create a Reserved IP, which is a reassignable static IP address.\n- How do I get my Droplet's FTP credentials?: https://docs.digitalocean.com/support/how-do-i-get-my-droplets-ftp-credentials/index.html.md\n  Transfer files over SSH with SFTP.\n- I did not get an email of my Droplet's root password: https://docs.digitalocean.com/support/i-did-not-get-an-email-of-my-droplets-root-password/index.html.md\n  We do not email a Droplet's root password. You can reset your root password if you don't remember it.\n- How do I debug a firewall causing connection problems with my Droplet?: https://docs.digitalocean.com/support/how-do-i-debug-a-firewall-causing-connection-problems-with-my-droplet/index.html.md\n  Diagnose and troubleshoot firewall issues that could be causing network connectivity issues.\n- How do I debug my Droplet's network configuration?: https://docs.digitalocean.com/support/how-do-i-debug-my-droplets-network-configuration/index.html.md\n  To debug your network configuration, verify the Droplet's network interfaces and check its network configuration file.\n- I lost the SSH key for my Droplet: https://docs.digitalocean.com/support/i-lost-the-ssh-key-for-my-droplet/index.html.md\n  If you lose the private SSH key you use to log in to a Droplet, you need to re-enable password authentication to recover access.\n- How can I renew Let's Encrypt certificates?: https://docs.digitalocean.com/support/how-can-i-renew-lets-encrypt-certificates/index.html.md\n  You can renew your certificate manually using Certbot.\n- When I try to log in to SSH I get a Permission Denied error: https://docs.digitalocean.com/support/when-i-try-to-log-in-to-ssh-i-get-a-permission-denied-error/index.html.md\n  You may be receiving this error for various reasons, including a missing SSH key or incorrect password.\n- Why can't I use older versions of Linux on a Droplet?: https://docs.digitalocean.com/support/why-cant-i-use-older-versions-of-linux-on-a-droplet/index.html.md\n  Older operating systems can pose large security risks.\n- How do I recover a deleted Droplet?: https://docs.digitalocean.com/support/how-do-i-recover-a-deleted-droplet/index.html.md\n  You can recover your Droplet if you took a snapshot of the Droplet, enabled automated backups, or used SnapShooter for Droplet backups.\n- Can I install cPanel or WHM on my Droplet?: https://docs.digitalocean.com/support/can-i-install-cpanel-or-whm-on-my-droplet/index.html.md\n  You can install cPanel and WHM on AlmaLinux, Rocky, and Ubuntu Droplets.\n- Do snapshots retain the IP address of the Droplet they were created from?: https://docs.digitalocean.com/support/do-snapshots-retain-the-ip-address-of-the-droplet-they-were-created-from/index.html.md\n  No, but you can use reserved IPs to assign the same address to new or redeployed Droplets.\n- How do I fix disk space issues on my Droplet?: https://docs.digitalocean.com/support/how-do-i-fix-disk-space-issues-on-my-droplet/index.html.md\n  You can review disk usage on your Droplet and then remove unnecessary files.\n- Can I make my Droplet smaller?: https://docs.digitalocean.com/support/can-i-make-my-droplet-smaller/index.html.md\n  You cannot resize Droplets to smaller plans, but you can migrate your data to a smaller Droplet.\n- Can I use Windows on a Droplet?: https://docs.digitalocean.com/support/can-i-use-windows-on-a-droplet/index.html.md\n  No, we do not provide Windows images for Droplets or support Windows custom images.\n- How can I destroy my Droplets while maintaining my backups?: https://docs.digitalocean.com/support/how-can-i-destroy-my-droplets-while-maintaining-my-backups/index.html.md\n  Convert your backups to snapshots to save them indefinitely.\n- How can I migrate my data from my previous provider?: https://docs.digitalocean.com/support/how-can-i-migrate-my-data-from-my-previous-provider/index.html.md\n  We have guides to help you migrate your data from your previous provider.\n- How can I regain access to my Droplet when it won't boot?: https://docs.digitalocean.com/support/how-can-i-regain-access-to-my-droplet-when-it-wont-boot/index.html.md\n  Use the recovery ISO to access Droplets that fail to boot up or have system problems.\n- How do I install an SSL Certificate on a Droplet?: https://docs.digitalocean.com/support/how-do-i-install-an-ssl-certificate-on-a-droplet/index.html.md\n  You can typically install an SSL certificate by adding a few lines of configuration to the Droplet's web server, or by using tools that automatically add the configuration for you.\n- Why is my Droplet booting in Read Only mode?: https://docs.digitalocean.com/support/why-is-my-droplet-booting-in-read-only-mode/index.html.md\n  File system corruption can cause a Droplet to boot into read only mode.\n- How do I reset my Droplet's root password?: https://docs.digitalocean.com/support/how-do-i-reset-my-droplets-root-password/index.html.md\n  You can reset your Droplet's password using the control panel or the recovery ISO.\n- Why does my Droplet have high CPU or RAM usage?: https://docs.digitalocean.com/support/why-does-my-droplet-have-high-cpu-or-ram-usage/index.html.md\n  High RAM or CPU usage is normally the result of applications or kernel processes on the Droplet. You can monitor high CPU usage processes on the Droplet and stop them if necessary.\n- Can I have more than one WordPress instance installed?: https://docs.digitalocean.com/support/can-i-have-more-than-one-wordpress-instance-installed/index.html.md\n  Yes, you can serve multiple WordPress instances from a single Droplet. To install multiple WordPress instances on your Droplet, you first need to configure your Apache virtual hosts to be ready to accept information about multiple domains. Once you’ve …\n- Can I have more than one domain on the same Droplet?: https://docs.digitalocean.com/support/can-i-have-more-than-one-domain-on-the-same-droplet/index.html.md\n  Yes, you can point an unlimited number of domains to a single Droplet, and you can serve multiple websites from a single Droplet. If you are using Apache to serve websites on your Droplet, you need to set up your Apache virtual hosts to host multiple …\n- Why is SMTP blocked?: https://docs.digitalocean.com/support/why-is-smtp-blocked/index.html.md\n  SMTP is blocked on Droplets to prevent spam and abuse. Use a third-party email as a service provider instead.\n- Has my Droplet migration completed?: https://docs.digitalocean.com/support/has-my-droplet-migration-completed/index.html.md\n  You can check to see if a Droplet's migration has completed by checking its history.\n- How do I manually back up my Droplet?: https://docs.digitalocean.com/support/how-do-i-manually-back-up-my-droplet/index.html.md\n  Manually back up a Droplet by creating a snapshot, converting an automatic backup into a snapshot, or using third-party tools like SnapShooter or `rsync` to back up specific data.\n- How do I transfer a Droplet to someone else?: https://docs.digitalocean.com/support/how-do-i-transfer-a-droplet-to-someone-else/index.html.md\n  You can transfer snapshots of Droplets to others by email address or by team.\n- How to Troubleshoot SSH Authentication Issues: https://docs.digitalocean.com/support/how-to-troubleshoot-ssh-authentication-issues/index.html.md\n  Problems with SSH authentication includes permission denied with SSH keys and passwords.\n- How to Troubleshoot SSH Connectivity Issues: https://docs.digitalocean.com/support/how-to-troubleshoot-ssh-connectivity-issues/index.html.md\n  Problems with SSH connectivity include hostname resolution errors and connections being refused or timing out.\n- My Droplet is sending an outgoing flood or DDoS: https://docs.digitalocean.com/support/my-droplet-is-sending-an-outgoing-flood-or-ddos/index.html.md\n  Next steps to take if you receive a message from DigitalOcean support because your Droplet is sending an outgoing flood or DDoS.\n- How to Troubleshoot SSH Protocol Issues: https://docs.digitalocean.com/support/how-to-troubleshoot-ssh-protocol-issues/index.html.md\n  Problems during SSH protocol initiation include the client suddenly getting dropped or closed, the client returning errors about cipher negotiation, or issues with an unknown or changed remote host.\n- How to Troubleshoot SSH Shell Environment Issues: https://docs.digitalocean.com/support/how-to-troubleshoot-ssh-shell-environment-issues/index.html.md\n  Problems with SSH shell environments include being unable to fork a process, the system reporting it's not a valid shell, or issues reaching the home directory.\n\n"
+    }
+  ]
+}
+(exit code: 0)
+
+=== tools/call docs-get-quickstart ===
+Command: npx -y @modelcontextprotocol/inspector --cli -- /tmp/mcp-digitalocean --services docs --digitalocean-api-token "dop_v1_test_placeholder_for_inspector" --method tools/call --tool-name docs-get-quickstart --tool-arg Service=droplets
+
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "# Quickstart: droplets\n\nSource: https://docs.digitalocean.com/products/droplets/getting-started/quickstart/\n\n---\n\n# Droplet Quickstart\n\nDigitalOcean Droplets are Linux-based virtual machines (VMs) that run on top of virtualized hardware. Each Droplet you create is a new server you can use, either standalone or as part of a larger, cloud-based infrastructure.\n\n## Create Droplets\n\n1. From the **Create** menu in the top right of the [control panel](https://cloud.digitalocean.com), click **Droplets**.\n2. Choose an image, which can be a Linux distribution, container distribution, one-click app, [snapshot](https://docs.digitalocean.com/products/snapshots/index.html.md), or [backup](https://docs.digitalocean.com/products/backups/index.html.md).\n3. Choose a [plan and size](https://docs.digitalocean.com/products/droplets/details/pricing/index.html.md) for your Droplet, which determines its RAM, disk space, and vCPUs as well as its price. Learn more about [how to choose the right Droplet plan](https://docs.digitalocean.com/products/droplets/concepts/choosing-a-plan/index.html.md).\n\nThe Droplet create screen has a number of options after this, which you can customize now or after creation. To accept the defaults, scroll to the bottom and click **Create**. Otherwise:\n\n4. Optionally, add [block storage](https://docs.digitalocean.com/products/volumes/index.html.md).\n5. Choose a [datacenter region](https://docs.digitalocean.com/platform/regional-availability/index.html.md).\n6. Select a [VPC network](https://docs.digitalocean.com/products/networking/vpc/index.html.md) for the Droplet.\n7. Select additional options, like [IPv6](https://docs.digitalocean.com/products/networking/ipv6/index.html.md) and [monitoring](https://docs.digitalocean.com/products/monitoring/index.html.md). These options come at no additional cost, and are easier to enable now than after creation.\n8. Choose an [SSH key](https://docs.digitalocean.com/products/droplets/how-to/add-ssh-keys/index.html.md), if you’ve added one, or create a root password for the Droplet.\n9. Enter a name and click **Create**.\n\nFrom here, you can follow our [detailed guide on connecting to Droplets with SSH](https://docs.digitalocean.com/products/droplets/how-to/connect-with-ssh/index.html.md), or follow the instructions below.\n\n## Connect to Droplets\n\nTo connect by using a terminal on Linux, macOS, or Windows Subsystem for Linux:\n\n1. Open your terminal, and enter the command `ssh username@203.0.113.0`.\n\n   Substitute in your Droplet’s IP address after the `@`. The username is `root` on most distributions.\n2. Press `ENTER` and answer `yes` to the prompt that confirms the connection.\n3. If you’re not using SSH keys, enter your password when prompted.\n\nWindows users can alternatively [connect with PuTTY](https://docs.digitalocean.com/products/droplets/how-to/connect-with-ssh/putty/index.html.md).\n\nWhen you’ve logged in, your command prompt changes and you see a welcome screen.\n\n## Destroy Droplets\n\nDestroying a Droplet permanently and irreversibly destroys the Droplet, its contents, automated backups, and any associated resources that you have selected to destroy along with the Droplet.\n\n1. To save one or more of the Droplet’s backup images, [convert those backups into snapshots](https://docs.digitalocean.com/products/backups/how-to/convert-to-snapshot/index.html.md) before destroying the Droplet.\n2. From the [control panel](https://cloud.digitalocean.com), click the Droplet’s **More** menu and choose **Destroy**.\n3. (Optional) On the Droplet’s **Destroy** page, under **Destroy Droplet and backups**, click **Show associated resources** and select any of the Droplet’s connected resources that you would also like to destroy.\n4. Click **Destroy this Droplet and backups** (or **Destroy this Droplet and X selected resources** if you are also destroying resources associated with the Droplet).\n5. Confirm the destruction in the confirmation window that opens by clicking **Confirm** (or **Destroy** if you are also destroying resources associated with the Droplet). If you are also destroying associated resources, it prompts you to enter the Droplet’s name into the confirmation window before destroying the Droplet."
+    }
+  ]
+}
+(exit code: 0)
+
+=== tools/call docs-get-page ===
+Command: npx -y @modelcontextprotocol/inspector --cli -- /tmp/mcp-digitalocean --services docs --digitalocean-api-token "dop_v1_test_placeholder_for_inspector" --method tools/call --tool-name docs-get-page --tool-arg 'URL=https://docs.digitalocean.com/products/droplets/getting-started/quickstart/index.html.md'
+
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "# Droplet Quickstart\n\nDigitalOcean Droplets are Linux-based virtual machines (VMs) that run on top of virtualized hardware. Each Droplet you create is a new server you can use, either standalone or as part of a larger, cloud-based infrastructure.\n\n## Create Droplets\n\n1. From the **Create** menu in the top right of the [control panel](https://cloud.digitalocean.com), click **Droplets**.\n2. Choose an image, which can be a Linux distribution, container distribution, one-click app, [snapshot](https://docs.digitalocean.com/products/snapshots/index.html.md), or [backup](https://docs.digitalocean.com/products/backups/index.html.md).\n3. Choose a [plan and size](https://docs.digitalocean.com/products/droplets/details/pricing/index.html.md) for your Droplet, which determines its RAM, disk space, and vCPUs as well as its price. Learn more about [how to choose the right Droplet plan](https://docs.digitalocean.com/products/droplets/concepts/choosing-a-plan/index.html.md).\n\nThe Droplet create screen has a number of options after this, which you can customize now or after creation. To accept the defaults, scroll to the bottom and click **Create**. Otherwise:\n\n4. Optionally, add [block storage](https://docs.digitalocean.com/products/volumes/index.html.md).\n5. Choose a [datacenter region](https://docs.digitalocean.com/platform/regional-availability/index.html.md).\n6. Select a [VPC network](https://docs.digitalocean.com/products/networking/vpc/index.html.md) for the Droplet.\n7. Select additional options, like [IPv6](https://docs.digitalocean.com/products/networking/ipv6/index.html.md) and [monitoring](https://docs.digitalocean.com/products/monitoring/index.html.md). These options come at no additional cost, and are easier to enable now than after creation.\n8. Choose an [SSH key](https://docs.digitalocean.com/products/droplets/how-to/add-ssh-keys/index.html.md), if you’ve added one, or create a root password for the Droplet.\n9. Enter a name and click **Create**.\n\nFrom here, you can follow our [detailed guide on connecting to Droplets with SSH](https://docs.digitalocean.com/products/droplets/how-to/connect-with-ssh/index.html.md), or follow the instructions below.\n\n## Connect to Droplets\n\nTo connect by using a terminal on Linux, macOS, or Windows Subsystem for Linux:\n\n1. Open your terminal, and enter the command `ssh username@203.0.113.0`.\n\n   Substitute in your Droplet’s IP address after the `@`. The username is `root` on most distributions.\n2. Press `ENTER` and answer `yes` to the prompt that confirms the connection.\n3. If you’re not using SSH keys, enter your password when prompted.\n\nWindows users can alternatively [connect with PuTTY](https://docs.digitalocean.com/products/droplets/how-to/connect-with-ssh/putty/index.html.md).\n\nWhen you’ve logged in, your command prompt changes and you see a welcome screen.\n\n## Destroy Droplets\n\nDestroying a Droplet permanently and irreversibly destroys the Droplet, its contents, automated backups, and any associated resources that you have selected to destroy along with the Droplet.\n\n1. To save one or more of the Droplet’s backup images, [convert those backups into snapshots](https://docs.digitalocean.com/products/backups/how-to/convert-to-snapshot/index.html.md) before destroying the Droplet.\n2. From the [control panel](https://cloud.digitalocean.com), click the Droplet’s **More** menu and choose **Destroy**.\n3. (Optional) On the Droplet’s **Destroy** page, under **Destroy Droplet and backups**, click **Show associated resources** and select any of the Droplet’s connected resources that you would also like to destroy.\n4. Click **Destroy this Droplet and backups** (or **Destroy this Droplet and X selected resources** if you are also destroying resources associated with the Droplet).\n5. Confirm the destruction in the confirmation window that opens by clicking **Confirm** (or **Destroy** if you are also destroying resources associated with the Droplet). If you are also destroying associated resources, it prompts you to enter the Droplet’s name into the confirmation window before destroying the Droplet."
+    }
+  ]
+}
+(exit code: 0)
+
+=== go test ./pkg/registry/docs/... ===
+=== RUN   TestParseLlmsTxt
+--- PASS: TestParseLlmsTxt (0.00s)
+=== RUN   TestParseLlmsTxt_Empty
+--- PASS: TestParseLlmsTxt_Empty (0.00s)
+=== RUN   TestSearchIndex
+=== RUN   TestSearchIndex/search_by_service_name
+=== RUN   TestSearchIndex/search_for_quickstart
+=== RUN   TestSearchIndex/search_for_create
+=== RUN   TestSearchIndex/search_for_resize
+=== RUN   TestSearchIndex/no_results
+=== RUN   TestSearchIndex/empty_query
+--- PASS: TestSearchIndex (0.00s)
+    --- PASS: TestSearchIndex/search_by_service_name (0.00s)
+    --- PASS: TestSearchIndex/search_for_quickstart (0.00s)
+    --- PASS: TestSearchIndex/search_for_create (0.00s)
+    --- PASS: TestSearchIndex/search_for_resize (0.00s)
+    --- PASS: TestSearchIndex/no_results (0.00s)
+    --- PASS: TestSearchIndex/empty_query (0.00s)
+=== RUN   TestResolveServiceSlug
+=== RUN   TestResolveServiceSlug/k8s
+=== RUN   TestResolveServiceSlug/doks
+=== RUN   TestResolveServiceSlug/managed_kubernetes
+=== RUN   TestResolveServiceSlug/KUBERNETES
+=== RUN   TestResolveServiceSlug/app_platform
+=== RUN   TestResolveServiceSlug/apps
+=== RUN   TestResolveServiceSlug/gpu
+=== RUN   TestResolveServiceSlug/vms
+=== RUN   TestResolveServiceSlug/dbaas
+=== RUN   TestResolveServiceSlug/object_storage
+=== RUN   TestResolveServiceSlug/docr
+=== RUN   TestResolveServiceSlug/serverless
+=== RUN   TestResolveServiceSlug/unknown_service
+=== RUN   TestResolveServiceSlug/__droplets__
+--- PASS: TestResolveServiceSlug (0.00s)
+    --- PASS: TestResolveServiceSlug/k8s (0.00s)
+    --- PASS: TestResolveServiceSlug/doks (0.00s)
+    --- PASS: TestResolveServiceSlug/managed_kubernetes (0.00s)
+    --- PASS: TestResolveServiceSlug/KUBERNETES (0.00s)
+    --- PASS: TestResolveServiceSlug/app_platform (0.00s)
+    --- PASS: TestResolveServiceSlug/apps (0.00s)
+    --- PASS: TestResolveServiceSlug/gpu (0.00s)
+    --- PASS: TestResolveServiceSlug/vms (0.00s)
+    --- PASS: TestResolveServiceSlug/dbaas (0.00s)
+    --- PASS: TestResolveServiceSlug/object_storage (0.00s)
+    --- PASS: TestResolveServiceSlug/docr (0.00s)
+    --- PASS: TestResolveServiceSlug/serverless (0.00s)
+    --- PASS: TestResolveServiceSlug/unknown_service (0.00s)
+    --- PASS: TestResolveServiceSlug/__droplets__ (0.00s)
+=== RUN   TestCleanMarkdown
+=== RUN   TestCleanMarkdown/removes_excessive_newlines
+=== RUN   TestCleanMarkdown/removes_HTML_tags
+=== RUN   TestCleanMarkdown/trims_whitespace
+=== RUN   TestCleanMarkdown/preserves_normal_markdown
+--- PASS: TestCleanMarkdown (0.00s)
+    --- PASS: TestCleanMarkdown/removes_excessive_newlines (0.00s)
+    --- PASS: TestCleanMarkdown/removes_HTML_tags (0.00s)
+    --- PASS: TestCleanMarkdown/trims_whitespace (0.00s)
+    --- PASS: TestCleanMarkdown/preserves_normal_markdown (0.00s)
+=== RUN   TestSearchDocs_MissingQuery
+--- PASS: TestSearchDocs_MissingQuery (0.00s)
+=== RUN   TestGetDoc_MissingURL
+--- PASS: TestGetDoc_MissingURL (0.00s)
+=== RUN   TestFindDocsForService_MissingService
+--- PASS: TestFindDocsForService_MissingService (0.00s)
+=== RUN   TestGetQuickstart_MissingService
+--- PASS: TestGetQuickstart_MissingService (0.00s)
+=== RUN   TestDocsTool_Tools
+--- PASS: TestDocsTool_Tools (0.00s)
+PASS
+ok  	mcp-digitalocean/pkg/registry/docs	(cached)
+(go test exit code: 0)

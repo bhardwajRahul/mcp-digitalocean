@@ -23,7 +23,7 @@ import (
 
 const (
 	mcpName                 = "mcp-digitalocean"
-	mcpVersion              = "1.0.39"
+	mcpVersion              = "1.0.42"
 	wsLoggingContextTimeout = 15 * time.Second
 )
 
@@ -154,6 +154,10 @@ func main() {
 		getClientFn,
 		services...,
 	)
+	if err != nil {
+		logger.Error("Failed to register tools: " + err.Error())
+		os.Exit(1)
+	}
 
 	// start our server.
 	err = runServer(ctx, svr, logger, *bindAddr, transport)

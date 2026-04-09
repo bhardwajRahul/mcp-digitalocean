@@ -82,17 +82,31 @@ func (m *ModelTool) getModelCard(ctx context.Context, req mcp.CallToolRequest) (
 	}
 
 	type ModelMetadata struct {
-		UUID              string          `json:"uuid"`
-		Name              string          `json:"name"`
-		Agreement         *godo.Agreement `json:"agreement,omitempty"`
-		ModelAvailability string          `json:"model_availability,omitempty"`
+		UUID              string                `json:"uuid"`
+		Name              string                `json:"name"`
+		Description       string                `json:"description,omitempty"`
+		Provider          string                `json:"provider,omitempty"`
+		Agreement         *godo.Agreement       `json:"agreement,omitempty"`
+		ModelAvailability string                `json:"model_availability,omitempty"`
+		ContextWindow     string                `json:"context_window,omitempty"`
+		Capabilities      []string              `json:"capabilities,omitempty"`
+		Modalities        *godo.ModelModalities `json:"modalities,omitempty"`
+		ParameterCount    float64               `json:"parameter_count,omitempty"`
+		Type              string                `json:"type,omitempty"`
 	}
 
 	metadata := ModelMetadata{
 		UUID:              model.Uuid,
 		Name:              model.Name,
+		Description:       model.Description,
+		Provider:          model.Provider,
 		Agreement:         model.Agreement,
 		ModelAvailability: model.ModelAvailability,
+		ContextWindow:     model.ContextWindow,
+		Capabilities:      model.Capabilities,
+		Modalities:        model.Modalities,
+		ParameterCount:    model.ParameterCount,
+		Type:              model.Type,
 	}
 
 	jsonData, err := json.MarshalIndent(metadata, "", "  ")
