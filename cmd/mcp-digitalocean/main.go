@@ -154,6 +154,10 @@ func main() {
 		getClientFn,
 		services...,
 	)
+	if err != nil {
+		logger.Error("Failed to register tools: " + err.Error())
+		os.Exit(1)
+	}
 
 	// start our server.
 	err = runServer(ctx, svr, logger, *bindAddr, transport)
