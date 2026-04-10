@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "description": "UpdateDedicatedInferenceV2 / PATCH /v2/dedicated-inferences/{id} — dedicated_inference_id plus DeploymentSpec + optional DeploymentSpecSecret",
+  "properties": {
+    "dedicated_inference_id": {
+      "type": "string",
+      "description": "UUID of the Dedicated Inference instance to update"
+    },
+    "spec": {
+      "type": "object",
+      "description": "DeploymentSpec fields to apply (partial updates follow API rules)",
+      "properties": {
+        "version": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "enable_public_endpoint": {
+          "type": "boolean"
+        },
+        "vpc": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string"
+            }
+          }
+        },
+        "model_deployments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "model_id": {
+                "type": "string"
+              },
+              "model_slug": {
+                "type": "string"
+              },
+              "model_provider": {
+                "type": "string"
+              },
+              "accelerators": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "accelerator_slug": {
+                      "type": "string"
+                    },
+                    "scale": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["accelerator_slug", "scale"]
+                }
+              }
+            },
+            "required": ["model_slug", "model_provider", "accelerators"]
+          }
+        }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "description": "DeploymentSpecSecret — if omitted, existing secrets preserved; if set, replaces hugging_face_token",
+      "properties": {
+        "hugging_face_token": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "required": ["dedicated_inference_id"]
+}

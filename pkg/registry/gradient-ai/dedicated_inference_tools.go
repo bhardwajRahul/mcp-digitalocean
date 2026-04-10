@@ -1,0 +1,393 @@
+package gradientai
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+
+	"github.com/digitalocean/godo"
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
+)
+
+// DedicatedInferenceTool provides Dedicated Inference lifecycle management tools.
+type DedicatedInferenceTool struct {
+	client func(ctx context.Context) (*godo.Client, error)
+}
+
+// NewDedicatedInferenceTool creates a new DedicatedInferenceTool instance.
+func NewDedicatedInferenceTool(client func(ctx context.Context) (*godo.Client, error)) *DedicatedInferenceTool {
+	return &DedicatedInferenceTool{
+		client: client,
+	}
+}
+
+func (d *DedicatedInferenceTool) createDedicatedInference(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := d.client(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+	}
+
+	args := req.GetArguments()
+
+	name, _ := args["Name"].(string)
+	if name == "" {
+		return mcp.NewToolResultError("Name is required"), nil
+	}
+
+	region, _ := args["Region"].(string)
+	if region == "" {
+		return mcp.NewToolResultError("Region is required"), nil
+	}
+
+	spec := &godo.DedicatedInferenceSpecRequest{
+		Name:   name,
+		Region: region,
+	}
+
+	if v, ok := args["EnablePublicEndpoint"].(bool); ok {
+		spec.EnablePublicEndpoint = v
+	}
+
+	if v, _ := args["VPCUUID"].(string); v != "" {
+		spec.VPC = &godo.DedicatedInferenceVPCRequest{UUID: v}
+	}
+
+	if deploymentsRaw, ok := args["ModelDeployments"].([]any); ok {
+		for _, depRaw := range deploymentsRaw {
+			dep, ok := depRaw.(map[string]any)
+			if !ok {
+				continue
+			}
+			modelReq := &godo.DedicatedInferenceModelRequest{
+				ModelSlug:     stringFromMap(dep, "ModelSlug"),
+				ModelProvider: stringFromMap(dep, "ModelProvider"),
+			}
+			if v := stringFromMap(dep, "ModelID"); v != "" {
+				modelReq.ModelID = v
+			}
+
+			if accsRaw, ok := dep["Accelerators"].([]any); ok {
+				for _, accRaw := range accsRaw {
+					acc, ok := accRaw.(map[string]any)
+					if !ok {
+						continue
+					}
+					modelReq.Accelerators = append(modelReq.Accelerators, &godo.DedicatedInferenceAcceleratorRequest{
+						AcceleratorSlug: stringFromMap(acc, "AcceleratorSlug"),
+						Scale:           uint64FromMap(acc, "Scale"),
+						Type:            stringFromMap(acc, "Type"),
+					})
+				}
+			}
+			spec.ModelDeployments = append(spec.ModelDeployments, modelReq)
+		}
+	}
+
+	if len(spec.ModelDeployments) == 0 {
+		return mcp.NewToolResultError("ModelDeployments is required and must not be empty"), nil
+	}
+
+	spec.Version = 1
+
+	createReq := &godo.DedicatedInferenceCreateRequest{
+		Spec: spec,
+	}
+
+	if token, _ := args["HuggingFaceToken"].(string); token != "" {
+		createReq.Secrets = &godo.DedicatedInferenceSecrets{
+			HuggingFaceToken: token,
+		}
+	}
+
+	di, authToken, _, err := client.DedicatedInference.Create(ctx, createReq)
+	if err != nil {
+		return mcp.NewToolResultErrorFromErr("Failed to create dedicated inference", err), nil
+	}
+
+	type createResponse struct {
+		DedicatedInference *godo.DedicatedInference      `json:"dedicated_inference"`
+		Token              *godo.DedicatedInferenceToken `json:"token,omitempty"`
+	}
+
+	jsonData, err := json.MarshalIndent(createResponse{
+		DedicatedInference: di,
+		Token:              authToken,
+	}, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal error: %w", err)
+	}
+
+	return mcp.NewToolResultText(string(jsonData)), nil
+}
+
+func (d *DedicatedInferenceTool) getDedicatedInference(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := d.client(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+	}
+
+	id, _ := req.GetArguments()["DedicatedInferenceID"].(string)
+	if id == "" {
+		return mcp.NewToolResultError("DedicatedInferenceID is required"), nil
+	}
+
+	di, _, err := client.DedicatedInference.Get(ctx, id)
+	if err != nil {
+		return mcp.NewToolResultErrorFromErr("Failed to get dedicated inference", err), nil
+	}
+
+	jsonData, err := json.MarshalIndent(di, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal error: %w", err)
+	}
+
+	return mcp.NewToolResultText(string(jsonData)), nil
+}
+
+func (d *DedicatedInferenceTool) listDedicatedInferences(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := d.client(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+	}
+
+	args := req.GetArguments()
+
+	opts := &godo.DedicatedInferenceListOptions{}
+	if v, _ := args["Region"].(string); v != "" {
+		opts.Region = v
+	}
+	if v, _ := args["Name"].(string); v != "" {
+		opts.Name = v
+	}
+	if v, ok := args["Page"].(float64); ok {
+		opts.Page = int(v)
+	}
+	if v, ok := args["PerPage"].(float64); ok {
+		opts.PerPage = int(v)
+	}
+
+	items, _, err := client.DedicatedInference.List(ctx, opts)
+	if err != nil {
+		return mcp.NewToolResultErrorFromErr("Failed to list dedicated inferences", err), nil
+	}
+
+	jsonData, err := json.MarshalIndent(items, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal error: %w", err)
+	}
+
+	return mcp.NewToolResultText(string(jsonData)), nil
+}
+
+func (d *DedicatedInferenceTool) updateDedicatedInference(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := d.client(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+	}
+
+	args := req.GetArguments()
+
+	id, _ := args["DedicatedInferenceID"].(string)
+	if id == "" {
+		return mcp.NewToolResultError("DedicatedInferenceID is required"), nil
+	}
+
+	spec := &godo.DedicatedInferenceSpecRequest{}
+	if v, _ := args["Name"].(string); v != "" {
+		spec.Name = v
+	}
+	if v, _ := args["Region"].(string); v != "" {
+		spec.Region = v
+	}
+	if v, ok := args["EnablePublicEndpoint"].(bool); ok {
+		spec.EnablePublicEndpoint = v
+	}
+	if v, _ := args["VPCUUID"].(string); v != "" {
+		spec.VPC = &godo.DedicatedInferenceVPCRequest{UUID: v}
+	}
+
+	if deploymentsRaw, ok := args["ModelDeployments"].([]any); ok {
+		for _, depRaw := range deploymentsRaw {
+			dep, ok := depRaw.(map[string]any)
+			if !ok {
+				continue
+			}
+			modelReq := &godo.DedicatedInferenceModelRequest{
+				ModelSlug:     stringFromMap(dep, "ModelSlug"),
+				ModelProvider: stringFromMap(dep, "ModelProvider"),
+			}
+			if v := stringFromMap(dep, "ModelID"); v != "" {
+				modelReq.ModelID = v
+			}
+
+			if accsRaw, ok := dep["Accelerators"].([]any); ok {
+				for _, accRaw := range accsRaw {
+					acc, ok := accRaw.(map[string]any)
+					if !ok {
+						continue
+					}
+					modelReq.Accelerators = append(modelReq.Accelerators, &godo.DedicatedInferenceAcceleratorRequest{
+						AcceleratorSlug: stringFromMap(acc, "AcceleratorSlug"),
+						Scale:           uint64FromMap(acc, "Scale"),
+						Type:            stringFromMap(acc, "Type"),
+					})
+				}
+			}
+			spec.ModelDeployments = append(spec.ModelDeployments, modelReq)
+		}
+	}
+
+	updateReq := &godo.DedicatedInferenceUpdateRequest{
+		Spec: spec,
+	}
+
+	if token, _ := args["HuggingFaceToken"].(string); token != "" {
+		updateReq.Secrets = &godo.DedicatedInferenceSecrets{
+			HuggingFaceToken: token,
+		}
+	}
+
+	di, _, err := client.DedicatedInference.Update(ctx, id, updateReq)
+	if err != nil {
+		return mcp.NewToolResultErrorFromErr("Failed to update dedicated inference", err), nil
+	}
+
+	jsonData, err := json.MarshalIndent(di, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal error: %w", err)
+	}
+
+	return mcp.NewToolResultText(string(jsonData)), nil
+}
+
+func (d *DedicatedInferenceTool) deleteDedicatedInference(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	client, err := d.client(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+	}
+
+	id, _ := req.GetArguments()["DedicatedInferenceID"].(string)
+	if id == "" {
+		return mcp.NewToolResultError("DedicatedInferenceID is required"), nil
+	}
+
+	_, err = client.DedicatedInference.Delete(ctx, id)
+	if err != nil {
+		return mcp.NewToolResultErrorFromErr("Failed to delete dedicated inference", err), nil
+	}
+
+	return mcp.NewToolResultText(`{"status": "success", "message": "Dedicated inference instance deleted"}`), nil
+}
+
+// Tools returns the list of server tools for Dedicated Inference management.
+func (d *DedicatedInferenceTool) Tools() []server.ServerTool {
+	return []server.ServerTool{
+		{
+			Handler: d.createDedicatedInference,
+			Tool: mcp.NewTool(
+				"dedicated-inference-create",
+				mcp.WithDescription("Create a new Dedicated Inference instance (CreateDedicatedInferenceV2). See spec/dedicated-inference-create-schema.json for the HTTP/API-aligned request shape. Tool arguments use UpperCamelCase; returns instance and optional initial auth token."),
+				mcp.WithString("Name", mcp.Required(), mcp.Description("Name of the dedicated inference instance")),
+				mcp.WithString("Region", mcp.Required(), mcp.Description("Region slug for deployment (e.g. nyc2, tor1, atl1)")),
+				mcp.WithBoolean("EnablePublicEndpoint", mcp.Description("Whether to enable a public endpoint for the instance")),
+				mcp.WithString("VPCUUID", mcp.Description("UUID of the VPC to deploy into")),
+				mcp.WithArray("ModelDeployments", mcp.Required(), mcp.Description("Model deployments to configure"), mcp.Items(map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"ModelSlug":     map[string]any{"type": "string", "description": "Slug identifier of the model (e.g. deepseek-ai/DeepSeek-R1)"},
+						"ModelProvider": map[string]any{"type": "string", "description": "Model provider (e.g. huggingface)"},
+						"ModelID":       map[string]any{"type": "string", "description": "Optional model ID"},
+						"Accelerators": map[string]any{
+							"type": "array",
+							"items": map[string]any{
+								"type": "object",
+								"properties": map[string]any{
+									"AcceleratorSlug": map[string]any{"type": "string", "description": "GPU accelerator slug (e.g. gpu-h100x8-640gb-200vcpu-1800gb)"},
+									"Scale":           map[string]any{"type": "number", "description": "Number of accelerator instances"},
+									"Type":            map[string]any{"type": "string", "description": "Accelerator type"},
+								},
+								"required": []string{"AcceleratorSlug", "Scale"},
+							},
+							"description": "GPU accelerators for this model deployment",
+						},
+					},
+					"required": []string{"ModelSlug", "ModelProvider", "Accelerators"},
+				})),
+				mcp.WithString("HuggingFaceToken", mcp.Description("HuggingFace API token for gated models (write-only, never returned in responses)")),
+			),
+		},
+		{
+			Handler: d.getDedicatedInference,
+			Tool: mcp.NewTool(
+				"dedicated-inference-get",
+				mcp.WithDescription("Get details of a Dedicated Inference instance (GetDedicatedInferenceV2) by ID."),
+				mcp.WithString("DedicatedInferenceID", mcp.Required(), mcp.Description("UUID of the dedicated inference instance")),
+			),
+		},
+		{
+			Handler: d.listDedicatedInferences,
+			Tool: mcp.NewTool(
+				"dedicated-inference-list",
+				mcp.WithDescription("List Dedicated Inference instances (ListDedicatedInferenceV2) with optional filters and pagination."),
+				mcp.WithString("Region", mcp.Description("Filter by region slug (e.g. nyc2)")),
+				mcp.WithString("Name", mcp.Description("Filter by instance name")),
+				mcp.WithNumber("Page", mcp.Description("Page number for pagination")),
+				mcp.WithNumber("PerPage", mcp.Description("Number of items per page")),
+			),
+		},
+		{
+			Handler: d.updateDedicatedInference,
+			Tool: mcp.NewTool(
+				"dedicated-inference-update",
+				mcp.WithDescription("Update a Dedicated Inference instance (UpdateDedicatedInferenceV2). See spec/dedicated-inference-update-schema.json for the HTTP/API-aligned body shape."),
+				mcp.WithString("DedicatedInferenceID", mcp.Required(), mcp.Description("UUID of the dedicated inference instance to update")),
+				mcp.WithString("Name", mcp.Description("New name for the instance")),
+				mcp.WithString("Region", mcp.Description("New region slug")),
+				mcp.WithBoolean("EnablePublicEndpoint", mcp.Description("Whether to enable a public endpoint")),
+				mcp.WithString("VPCUUID", mcp.Description("UUID of the VPC to deploy into")),
+				mcp.WithArray("ModelDeployments", mcp.Description("Updated model deployments"), mcp.Items(map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"ModelSlug":     map[string]any{"type": "string", "description": "Slug identifier of the model"},
+						"ModelProvider": map[string]any{"type": "string", "description": "Model provider"},
+						"ModelID":       map[string]any{"type": "string", "description": "Optional model ID"},
+						"Accelerators": map[string]any{
+							"type": "array",
+							"items": map[string]any{
+								"type": "object",
+								"properties": map[string]any{
+									"AcceleratorSlug": map[string]any{"type": "string", "description": "GPU accelerator slug"},
+									"Scale":           map[string]any{"type": "number", "description": "Number of accelerator instances"},
+									"Type":            map[string]any{"type": "string", "description": "Accelerator type"},
+								},
+								"required": []string{"AcceleratorSlug", "Scale"},
+							},
+							"description": "GPU accelerators for this model deployment",
+						},
+					},
+					"required": []string{"ModelSlug", "ModelProvider", "Accelerators"},
+				})),
+				mcp.WithString("HuggingFaceToken", mcp.Description("HuggingFace API token for gated models (replaces existing if provided, preserved if omitted)")),
+			),
+		},
+		{
+			Handler: d.deleteDedicatedInference,
+			Tool: mcp.NewTool(
+				"dedicated-inference-delete",
+				mcp.WithDescription("Delete a Dedicated Inference instance (DeleteDedicatedInferenceV2)."),
+				mcp.WithString("DedicatedInferenceID", mcp.Required(), mcp.Description("UUID of the dedicated inference instance to delete")),
+			),
+		},
+	}
+}
+
+func stringFromMap(m map[string]any, key string) string {
+	v, _ := m[key].(string)
+	return v
+}
+
+func uint64FromMap(m map[string]any, key string) uint64 {
+	v, _ := m[key].(float64)
+	return uint64(v)
+}
