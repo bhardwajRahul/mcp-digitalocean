@@ -15,6 +15,11 @@ type DedicatedInferenceTool struct {
 	client func(ctx context.Context) (*godo.Client, error)
 }
 
+type listResponse struct {
+	Items []godo.DedicatedInferenceListItem `json:"items"`
+	Meta  *godo.Meta                        `json:"meta,omitempty"`
+}
+
 // NewDedicatedInferenceTool creates a new DedicatedInferenceTool instance.
 func NewDedicatedInferenceTool(client func(ctx context.Context) (*godo.Client, error)) *DedicatedInferenceTool {
 	return &DedicatedInferenceTool{
@@ -53,37 +58,7 @@ func (d *DedicatedInferenceTool) createDedicatedInference(ctx context.Context, r
 		spec.VPC = &godo.DedicatedInferenceVPCRequest{UUID: v}
 	}
 
-	if deploymentsRaw, ok := args["ModelDeployments"].([]any); ok {
-		for _, depRaw := range deploymentsRaw {
-			dep, ok := depRaw.(map[string]any)
-			if !ok {
-				continue
-			}
-			modelReq := &godo.DedicatedInferenceModelRequest{
-				ModelSlug:     stringFromMap(dep, "ModelSlug"),
-				ModelProvider: stringFromMap(dep, "ModelProvider"),
-			}
-			if v := stringFromMap(dep, "ModelID"); v != "" {
-				modelReq.ModelID = v
-			}
-
-			if accsRaw, ok := dep["Accelerators"].([]any); ok {
-				for _, accRaw := range accsRaw {
-					acc, ok := accRaw.(map[string]any)
-					if !ok {
-						continue
-					}
-					modelReq.Accelerators = append(modelReq.Accelerators, &godo.DedicatedInferenceAcceleratorRequest{
-						AcceleratorSlug: stringFromMap(acc, "AcceleratorSlug"),
-						Scale:           uint64FromMap(acc, "Scale"),
-						Type:            stringFromMap(acc, "Type"),
-					})
-				}
-			}
-			spec.ModelDeployments = append(spec.ModelDeployments, modelReq)
-		}
-	}
-
+	spec.ModelDeployments = parseModelDeployments(args)
 	if len(spec.ModelDeployments) == 0 {
 		return mcp.NewToolResultError("ModelDeployments is required and must not be empty"), nil
 	}
@@ -110,15 +85,10 @@ func (d *DedicatedInferenceTool) createDedicatedInference(ctx context.Context, r
 		Token              *godo.DedicatedInferenceToken `json:"token,omitempty"`
 	}
 
-	jsonData, err := json.MarshalIndent(createResponse{
+	return marshalResult(createResponse{
 		DedicatedInference: di,
 		Token:              authToken,
-	}, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshal error: %w", err)
-	}
-
-	return mcp.NewToolResultText(string(jsonData)), nil
+	})
 }
 
 func (d *DedicatedInferenceTool) getDedicatedInference(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -137,12 +107,7 @@ func (d *DedicatedInferenceTool) getDedicatedInference(ctx context.Context, req 
 		return mcp.NewToolResultErrorFromErr("Failed to get dedicated inference", err), nil
 	}
 
-	jsonData, err := json.MarshalIndent(di, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshal error: %w", err)
-	}
-
-	return mcp.NewToolResultText(string(jsonData)), nil
+	return marshalResult(di)
 }
 
 func (d *DedicatedInferenceTool) listDedicatedInferences(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -167,17 +132,19 @@ func (d *DedicatedInferenceTool) listDedicatedInferences(ctx context.Context, re
 		opts.PerPage = int(v)
 	}
 
-	items, _, err := client.DedicatedInference.List(ctx, opts)
+	items, resp, err := client.DedicatedInference.List(ctx, opts)
 	if err != nil {
 		return mcp.NewToolResultErrorFromErr("Failed to list dedicated inferences", err), nil
 	}
 
-	jsonData, err := json.MarshalIndent(items, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshal error: %w", err)
+	result := listResponse{
+		Items: items,
+	}
+	if resp != nil && resp.Meta != nil {
+		result.Meta = resp.Meta
 	}
 
-	return mcp.NewToolResultText(string(jsonData)), nil
+	return marshalResult(result)
 }
 
 func (d *DedicatedInferenceTool) updateDedicatedInference(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -207,36 +174,7 @@ func (d *DedicatedInferenceTool) updateDedicatedInference(ctx context.Context, r
 		spec.VPC = &godo.DedicatedInferenceVPCRequest{UUID: v}
 	}
 
-	if deploymentsRaw, ok := args["ModelDeployments"].([]any); ok {
-		for _, depRaw := range deploymentsRaw {
-			dep, ok := depRaw.(map[string]any)
-			if !ok {
-				continue
-			}
-			modelReq := &godo.DedicatedInferenceModelRequest{
-				ModelSlug:     stringFromMap(dep, "ModelSlug"),
-				ModelProvider: stringFromMap(dep, "ModelProvider"),
-			}
-			if v := stringFromMap(dep, "ModelID"); v != "" {
-				modelReq.ModelID = v
-			}
-
-			if accsRaw, ok := dep["Accelerators"].([]any); ok {
-				for _, accRaw := range accsRaw {
-					acc, ok := accRaw.(map[string]any)
-					if !ok {
-						continue
-					}
-					modelReq.Accelerators = append(modelReq.Accelerators, &godo.DedicatedInferenceAcceleratorRequest{
-						AcceleratorSlug: stringFromMap(acc, "AcceleratorSlug"),
-						Scale:           uint64FromMap(acc, "Scale"),
-						Type:            stringFromMap(acc, "Type"),
-					})
-				}
-			}
-			spec.ModelDeployments = append(spec.ModelDeployments, modelReq)
-		}
-	}
+	spec.ModelDeployments = parseModelDeployments(args)
 
 	updateReq := &godo.DedicatedInferenceUpdateRequest{
 		Spec: spec,
@@ -253,12 +191,7 @@ func (d *DedicatedInferenceTool) updateDedicatedInference(ctx context.Context, r
 		return mcp.NewToolResultErrorFromErr("Failed to update dedicated inference", err), nil
 	}
 
-	jsonData, err := json.MarshalIndent(di, "", "  ")
-	if err != nil {
-		return nil, fmt.Errorf("marshal error: %w", err)
-	}
-
-	return mcp.NewToolResultText(string(jsonData)), nil
+	return marshalResult(di)
 }
 
 func (d *DedicatedInferenceTool) deleteDedicatedInference(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -292,28 +225,8 @@ func (d *DedicatedInferenceTool) Tools() []server.ServerTool {
 				mcp.WithString("Region", mcp.Required(), mcp.Description("Region slug for deployment (e.g. nyc2, tor1, atl1)")),
 				mcp.WithBoolean("EnablePublicEndpoint", mcp.Description("Whether to enable a public endpoint for the instance")),
 				mcp.WithString("VPCUUID", mcp.Description("UUID of the VPC to deploy into")),
-				mcp.WithArray("ModelDeployments", mcp.Required(), mcp.Description("Model deployments to configure"), mcp.Items(map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"ModelSlug":     map[string]any{"type": "string", "description": "Slug identifier of the model (e.g. deepseek-ai/DeepSeek-R1)"},
-						"ModelProvider": map[string]any{"type": "string", "description": "Model provider (e.g. huggingface)"},
-						"ModelID":       map[string]any{"type": "string", "description": "Optional model ID"},
-						"Accelerators": map[string]any{
-							"type": "array",
-							"items": map[string]any{
-								"type": "object",
-								"properties": map[string]any{
-									"AcceleratorSlug": map[string]any{"type": "string", "description": "GPU accelerator slug (e.g. gpu-h100x8-640gb-200vcpu-1800gb)"},
-									"Scale":           map[string]any{"type": "number", "description": "Number of accelerator instances"},
-									"Type":            map[string]any{"type": "string", "description": "Accelerator type"},
-								},
-								"required": []string{"AcceleratorSlug", "Scale"},
-							},
-							"description": "GPU accelerators for this model deployment",
-						},
-					},
-					"required": []string{"ModelSlug", "ModelProvider", "Accelerators"},
-				})),
+				mcp.WithArray("ModelDeployments", mcp.Required(), mcp.Description("Model deployments to configure"),
+					mcp.Items(modelDeploymentSchema([]string{"ModelSlug", "ModelProvider", "Accelerators"}))),
 				mcp.WithString("HuggingFaceToken", mcp.Description("HuggingFace API token for gated models (write-only, never returned in responses)")),
 			),
 		},
@@ -346,28 +259,8 @@ func (d *DedicatedInferenceTool) Tools() []server.ServerTool {
 				mcp.WithString("Region", mcp.Description("New region slug")),
 				mcp.WithBoolean("EnablePublicEndpoint", mcp.Description("Whether to enable a public endpoint")),
 				mcp.WithString("VPCUUID", mcp.Description("UUID of the VPC to deploy into")),
-				mcp.WithArray("ModelDeployments", mcp.Description("Updated model deployments"), mcp.Items(map[string]any{
-					"type": "object",
-					"properties": map[string]any{
-						"ModelSlug":     map[string]any{"type": "string", "description": "Slug identifier of the model"},
-						"ModelProvider": map[string]any{"type": "string", "description": "Model provider"},
-						"ModelID":       map[string]any{"type": "string", "description": "Optional model ID"},
-						"Accelerators": map[string]any{
-							"type": "array",
-							"items": map[string]any{
-								"type": "object",
-								"properties": map[string]any{
-									"AcceleratorSlug": map[string]any{"type": "string", "description": "GPU accelerator slug"},
-									"Scale":           map[string]any{"type": "number", "description": "Number of accelerator instances"},
-									"Type":            map[string]any{"type": "string", "description": "Accelerator type"},
-								},
-								"required": []string{"AcceleratorSlug", "Scale"},
-							},
-							"description": "GPU accelerators for this model deployment",
-						},
-					},
-					"required": []string{"ModelSlug", "ModelProvider", "Accelerators"},
-				})),
+				mcp.WithArray("ModelDeployments", mcp.Description("Updated model deployments"),
+					mcp.Items(modelDeploymentSchema([]string{"ModelSlug", "ModelProvider", "ModelID", "Accelerators"}))),
 				mcp.WithString("HuggingFaceToken", mcp.Description("HuggingFace API token for gated models (replaces existing if provided, preserved if omitted)")),
 			),
 		},
@@ -382,12 +275,95 @@ func (d *DedicatedInferenceTool) Tools() []server.ServerTool {
 	}
 }
 
+func parseModelDeployments(args map[string]any) []*godo.DedicatedInferenceModelRequest {
+	deploymentsRaw, ok := args["ModelDeployments"].([]any)
+	if !ok {
+		return nil
+	}
+
+	var deployments []*godo.DedicatedInferenceModelRequest
+	for _, depRaw := range deploymentsRaw {
+		dep, ok := depRaw.(map[string]any)
+		if !ok {
+			continue
+		}
+		modelReq := &godo.DedicatedInferenceModelRequest{
+			ModelSlug:     stringFromMap(dep, "ModelSlug"),
+			ModelProvider: stringFromMap(dep, "ModelProvider"),
+		}
+		if v := stringFromMap(dep, "ModelID"); v != "" {
+			modelReq.ModelID = v
+		}
+
+		if accsRaw, ok := dep["Accelerators"].([]any); ok {
+			for _, accRaw := range accsRaw {
+				acc, ok := accRaw.(map[string]any)
+				if !ok {
+					continue
+				}
+				scale, err := uint64FromMap(acc, "Scale")
+				if err != nil {
+					continue
+				}
+				modelReq.Accelerators = append(modelReq.Accelerators, &godo.DedicatedInferenceAcceleratorRequest{
+					AcceleratorSlug: stringFromMap(acc, "AcceleratorSlug"),
+					Scale:           scale,
+					Type:            stringFromMap(acc, "Type"),
+				})
+			}
+		}
+		deployments = append(deployments, modelReq)
+	}
+	return deployments
+}
+
+func marshalResult(v any) (*mcp.CallToolResult, error) {
+	jsonData, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal error: %w", err)
+	}
+	return mcp.NewToolResultText(string(jsonData)), nil
+}
+
+var acceleratorItemsSchema = map[string]any{
+	"type": "object",
+	"properties": map[string]any{
+		"AcceleratorSlug": map[string]any{"type": "string", "description": "GPU accelerator slug"},
+		"Scale":           map[string]any{"type": "number", "description": "Number of accelerator instances"},
+		"Type":            map[string]any{"type": "string", "description": "Accelerator type"},
+	},
+	"required": []string{"AcceleratorSlug", "Scale", "Type"},
+}
+
+func modelDeploymentSchema(requiredFields []string) map[string]any {
+	return map[string]any{
+		"type": "object",
+		"properties": map[string]any{
+			"ModelSlug":     map[string]any{"type": "string", "description": "Slug identifier of the model"},
+			"ModelProvider": map[string]any{"type": "string", "description": "Model provider"},
+			"ModelID":       map[string]any{"type": "string", "description": "Model deployment ID"},
+			"Accelerators": map[string]any{
+				"type":        "array",
+				"items":       acceleratorItemsSchema,
+				"description": "GPU accelerators for this model deployment",
+			},
+		},
+		"required": requiredFields,
+	}
+}
+
 func stringFromMap(m map[string]any, key string) string {
 	v, _ := m[key].(string)
 	return v
 }
 
-func uint64FromMap(m map[string]any, key string) uint64 {
-	v, _ := m[key].(float64)
-	return uint64(v)
+func uint64FromMap(m map[string]any, key string) (uint64, error) {
+	v, ok := m[key].(float64)
+	if !ok {
+		return 0, fmt.Errorf("%s must be a number", key)
+	}
+	if v < 1 {
+		return 0, fmt.Errorf("%s must be greater than 0, got %v", key, v)
+	}
+	return uint64(v), nil
 }

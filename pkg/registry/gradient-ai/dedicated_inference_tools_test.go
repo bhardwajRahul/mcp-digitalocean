@@ -19,6 +19,12 @@ func setupToolWithMock(mock godo.DedicatedInferenceService) *DedicatedInferenceT
 	})
 }
 
+func setupToolWithClientError() *DedicatedInferenceTool {
+	return NewDedicatedInferenceTool(func(ctx context.Context) (*godo.Client, error) {
+		return nil, errors.New("auth failed")
+	})
+}
+
 var testDI = &godo.DedicatedInference{
 	ID:      "di-uuid-1234",
 	Name:    "my-inference",
@@ -28,6 +34,20 @@ var testDI = &godo.DedicatedInference{
 	Endpoints: &godo.DedicatedInferenceEndpoints{
 		PublicEndpointFQDN:  "my-inference.public.example.com",
 		PrivateEndpointFQDN: "my-inference.private.example.com",
+	},
+	DeploymentSpec: &godo.DedicatedInferenceDeployment{
+		Version:              1,
+		EnablePublicEndpoint: true,
+		ModelDeployments: []*godo.DedicatedInferenceModelDeployment{
+			{
+				ModelID:       "model-deploy-uuid-1",
+				ModelSlug:     "deepseek-ai/DeepSeek-R1",
+				ModelProvider: "hugging_face",
+				Accelerators: []*godo.DedicatedInferenceAccelerator{
+					{AcceleratorSlug: "gpu-h100x8", Scale: 1, Type: "prefill_decode"},
+				},
+			},
+		},
 	},
 	CreatedAt: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 	UpdatedAt: time.Date(2026, 1, 2, 0, 0, 0, 0, time.UTC),
@@ -68,6 +88,109 @@ func TestDedicatedInferenceTool_create(t *testing.T) {
 			expectError: true,
 		},
 		{
+			name: "malformed deployment entry skipped",
+			args: map[string]any{
+				"Name":   "my-inference",
+				"Region": "nyc2",
+				"ModelDeployments": []any{
+					"not-a-map",
+				},
+			},
+			expectError: true,
+		},
+		{
+			name: "malformed accelerator entry skipped",
+			args: map[string]any{
+				"Name":   "my-inference",
+				"Region": "nyc2",
+				"ModelDeployments": []any{
+					map[string]any{
+						"ModelSlug":     "deepseek-ai/DeepSeek-R1",
+						"ModelProvider": "hugging_face",
+						"Accelerators":  []any{"not-a-map"},
+					},
+				},
+			},
+			mockSetup: func(m *MockDedicatedInferenceService) {
+				m.EXPECT().Create(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, req *godo.DedicatedInferenceCreateRequest) (*godo.DedicatedInference, *godo.DedicatedInferenceToken, *godo.Response, error) {
+						require.Len(t, req.Spec.ModelDeployments, 1)
+						require.Empty(t, req.Spec.ModelDeployments[0].Accelerators)
+						return testDI, testToken, &godo.Response{}, nil
+					})
+			},
+		},
+		{
+			name: "invalid scale skipped",
+			args: map[string]any{
+				"Name":   "my-inference",
+				"Region": "nyc2",
+				"ModelDeployments": []any{
+					map[string]any{
+						"ModelSlug":     "deepseek-ai/DeepSeek-R1",
+						"ModelProvider": "hugging_face",
+						"Accelerators": []any{
+							map[string]any{"AcceleratorSlug": "gpu-h100x8", "Scale": "not-a-number", "Type": "prefill_decode"},
+						},
+					},
+				},
+			},
+			mockSetup: func(m *MockDedicatedInferenceService) {
+				m.EXPECT().Create(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, req *godo.DedicatedInferenceCreateRequest) (*godo.DedicatedInference, *godo.DedicatedInferenceToken, *godo.Response, error) {
+						require.Empty(t, req.Spec.ModelDeployments[0].Accelerators)
+						return testDI, testToken, &godo.Response{}, nil
+					})
+			},
+		},
+		{
+			name: "zero scale skipped",
+			args: map[string]any{
+				"Name":   "my-inference",
+				"Region": "nyc2",
+				"ModelDeployments": []any{
+					map[string]any{
+						"ModelSlug":     "deepseek-ai/DeepSeek-R1",
+						"ModelProvider": "hugging_face",
+						"Accelerators": []any{
+							map[string]any{"AcceleratorSlug": "gpu-h100x8", "Scale": float64(0), "Type": "prefill_decode"},
+						},
+					},
+				},
+			},
+			mockSetup: func(m *MockDedicatedInferenceService) {
+				m.EXPECT().Create(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, req *godo.DedicatedInferenceCreateRequest) (*godo.DedicatedInference, *godo.DedicatedInferenceToken, *godo.Response, error) {
+						require.Empty(t, req.Spec.ModelDeployments[0].Accelerators)
+						return testDI, testToken, &godo.Response{}, nil
+					})
+			},
+		},
+		{
+			name: "ModelID passed through",
+			args: map[string]any{
+				"Name":   "my-inference",
+				"Region": "nyc2",
+				"ModelDeployments": []any{
+					map[string]any{
+						"ModelSlug":     "deepseek-ai/DeepSeek-R1",
+						"ModelProvider": "hugging_face",
+						"ModelID":       "model-deploy-uuid-1",
+						"Accelerators": []any{
+							map[string]any{"AcceleratorSlug": "gpu-h100x8", "Scale": float64(1), "Type": "prefill_decode"},
+						},
+					},
+				},
+			},
+			mockSetup: func(m *MockDedicatedInferenceService) {
+				m.EXPECT().Create(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, req *godo.DedicatedInferenceCreateRequest) (*godo.DedicatedInference, *godo.DedicatedInferenceToken, *godo.Response, error) {
+						require.Equal(t, "model-deploy-uuid-1", req.Spec.ModelDeployments[0].ModelID)
+						return testDI, testToken, &godo.Response{}, nil
+					})
+			},
+		},
+		{
 			name: "api error",
 			args: map[string]any{
 				"Name":   "my-inference",
@@ -75,9 +198,9 @@ func TestDedicatedInferenceTool_create(t *testing.T) {
 				"ModelDeployments": []any{
 					map[string]any{
 						"ModelSlug":     "deepseek-ai/DeepSeek-R1",
-						"ModelProvider": "huggingface",
+						"ModelProvider": "hugging_face",
 						"Accelerators": []any{
-							map[string]any{"AcceleratorSlug": "gpu-h100x8", "Scale": float64(1)},
+							map[string]any{"AcceleratorSlug": "gpu-h100x8", "Scale": float64(1), "Type": "prefill_decode"},
 						},
 					},
 				},
@@ -97,9 +220,9 @@ func TestDedicatedInferenceTool_create(t *testing.T) {
 				"ModelDeployments": []any{
 					map[string]any{
 						"ModelSlug":     "deepseek-ai/DeepSeek-R1",
-						"ModelProvider": "huggingface",
+						"ModelProvider": "hugging_face",
 						"Accelerators": []any{
-							map[string]any{"AcceleratorSlug": "gpu-h100x8", "Scale": float64(1), "Type": "nvidia"},
+							map[string]any{"AcceleratorSlug": "gpu-h100x8", "Scale": float64(1), "Type": "prefill_decode"},
 						},
 					},
 				},
@@ -142,9 +265,9 @@ func TestDedicatedInferenceTool_create(t *testing.T) {
 				"ModelDeployments": []any{
 					map[string]any{
 						"ModelSlug":     "meta-llama/Llama-3-8B",
-						"ModelProvider": "huggingface",
+						"ModelProvider": "hugging_face",
 						"Accelerators": []any{
-							map[string]any{"AcceleratorSlug": "gpu-a100", "Scale": float64(2)},
+							map[string]any{"AcceleratorSlug": "gpu-a100", "Scale": float64(2), "Type": "prefill_decode"},
 						},
 					},
 				},
@@ -279,14 +402,26 @@ func TestDedicatedInferenceTool_list(t *testing.T) {
 		mockSetup   func(*MockDedicatedInferenceService)
 		expectError bool
 		expectCount int
+		checkResult func(*testing.T, *mcp.CallToolResult)
 	}{
 		{
 			name: "list all",
 			args: map[string]any{},
 			mockSetup: func(m *MockDedicatedInferenceService) {
-				m.EXPECT().List(gomock.Any(), gomock.Any()).Return(testItems, &godo.Response{}, nil)
+				m.EXPECT().List(gomock.Any(), gomock.Any()).Return(testItems, &godo.Response{
+					Meta: &godo.Meta{Total: 2, Page: 1, Pages: 1},
+				}, nil)
 			},
 			expectCount: 2,
+			checkResult: func(t *testing.T, result *mcp.CallToolResult) {
+				tc, ok := result.Content[0].(mcp.TextContent)
+				require.True(t, ok)
+				var resp listResponse
+				err := json.Unmarshal([]byte(tc.Text), &resp)
+				require.NoError(t, err)
+				require.NotNil(t, resp.Meta)
+				require.Equal(t, 2, resp.Meta.Total)
+			},
 		},
 		{
 			name: "filter by region",
@@ -295,6 +430,18 @@ func TestDedicatedInferenceTool_list(t *testing.T) {
 				m.EXPECT().List(gomock.Any(), gomock.Any()).
 					DoAndReturn(func(_ context.Context, opts *godo.DedicatedInferenceListOptions) ([]godo.DedicatedInferenceListItem, *godo.Response, error) {
 						require.Equal(t, "nyc2", opts.Region)
+						return testItems[:1], &godo.Response{}, nil
+					})
+			},
+			expectCount: 1,
+		},
+		{
+			name: "filter by name",
+			args: map[string]any{"Name": "inference-1"},
+			mockSetup: func(m *MockDedicatedInferenceService) {
+				m.EXPECT().List(gomock.Any(), gomock.Any()).
+					DoAndReturn(func(_ context.Context, opts *godo.DedicatedInferenceListOptions) ([]godo.DedicatedInferenceListItem, *godo.Response, error) {
+						require.Equal(t, "inference-1", opts.Name)
 						return testItems[:1], &godo.Response{}, nil
 					})
 			},
@@ -347,13 +494,17 @@ func TestDedicatedInferenceTool_list(t *testing.T) {
 			require.False(t, resp.IsError)
 			require.NotEmpty(t, resp.Content)
 
-			tc2, ok := resp.Content[0].(mcp.TextContent)
+			textContent, ok := resp.Content[0].(mcp.TextContent)
 			require.True(t, ok)
 
-			var items []godo.DedicatedInferenceListItem
-			err = json.Unmarshal([]byte(tc2.Text), &items)
+			var result listResponse
+			err = json.Unmarshal([]byte(textContent.Text), &result)
 			require.NoError(t, err)
-			require.Len(t, items, tc.expectCount)
+			require.Len(t, result.Items, tc.expectCount)
+
+			if tc.checkResult != nil {
+				tc.checkResult(t, resp)
+			}
 		})
 	}
 }
@@ -410,6 +561,78 @@ func TestDedicatedInferenceTool_update(t *testing.T) {
 					DoAndReturn(func(_ context.Context, id string, req *godo.DedicatedInferenceUpdateRequest) (*godo.DedicatedInference, *godo.Response, error) {
 						require.NotNil(t, req.Secrets)
 						require.Equal(t, "hf_new_token", req.Secrets.HuggingFaceToken)
+						return updatedDI, &godo.Response{}, nil
+					})
+			},
+		},
+		{
+			name: "success with region update",
+			args: map[string]any{
+				"DedicatedInferenceID": "di-uuid-1234",
+				"Region":               "tor1",
+			},
+			mockSetup: func(m *MockDedicatedInferenceService) {
+				m.EXPECT().Update(gomock.Any(), "di-uuid-1234", gomock.Any()).
+					DoAndReturn(func(_ context.Context, id string, req *godo.DedicatedInferenceUpdateRequest) (*godo.DedicatedInference, *godo.Response, error) {
+						require.Equal(t, "tor1", req.Spec.Region)
+						return updatedDI, &godo.Response{}, nil
+					})
+			},
+		},
+		{
+			name: "success with enable public endpoint",
+			args: map[string]any{
+				"DedicatedInferenceID": "di-uuid-1234",
+				"EnablePublicEndpoint": true,
+			},
+			mockSetup: func(m *MockDedicatedInferenceService) {
+				m.EXPECT().Update(gomock.Any(), "di-uuid-1234", gomock.Any()).
+					DoAndReturn(func(_ context.Context, id string, req *godo.DedicatedInferenceUpdateRequest) (*godo.DedicatedInference, *godo.Response, error) {
+						require.True(t, req.Spec.EnablePublicEndpoint)
+						return updatedDI, &godo.Response{}, nil
+					})
+			},
+		},
+		{
+			name: "success with VPC UUID",
+			args: map[string]any{
+				"DedicatedInferenceID": "di-uuid-1234",
+				"VPCUUID":              "new-vpc-uuid",
+			},
+			mockSetup: func(m *MockDedicatedInferenceService) {
+				m.EXPECT().Update(gomock.Any(), "di-uuid-1234", gomock.Any()).
+					DoAndReturn(func(_ context.Context, id string, req *godo.DedicatedInferenceUpdateRequest) (*godo.DedicatedInference, *godo.Response, error) {
+						require.NotNil(t, req.Spec.VPC)
+						require.Equal(t, "new-vpc-uuid", req.Spec.VPC.UUID)
+						return updatedDI, &godo.Response{}, nil
+					})
+			},
+		},
+		{
+			name: "success with model deployments",
+			args: map[string]any{
+				"DedicatedInferenceID": "di-uuid-1234",
+				"ModelDeployments": []any{
+					map[string]any{
+						"ModelSlug":     "deepseek-ai/DeepSeek-R1",
+						"ModelProvider": "hugging_face",
+						"ModelID":       "model-deploy-uuid-1",
+						"Accelerators": []any{
+							map[string]any{"AcceleratorSlug": "gpu-h100x8", "Scale": float64(1), "Type": "prefill_decode"},
+						},
+					},
+				},
+			},
+			mockSetup: func(m *MockDedicatedInferenceService) {
+				m.EXPECT().Update(gomock.Any(), "di-uuid-1234", gomock.Any()).
+					DoAndReturn(func(_ context.Context, id string, req *godo.DedicatedInferenceUpdateRequest) (*godo.DedicatedInference, *godo.Response, error) {
+						require.Len(t, req.Spec.ModelDeployments, 1)
+						require.Equal(t, "model-deploy-uuid-1", req.Spec.ModelDeployments[0].ModelID)
+						require.Equal(t, "deepseek-ai/DeepSeek-R1", req.Spec.ModelDeployments[0].ModelSlug)
+						require.Equal(t, "hugging_face", req.Spec.ModelDeployments[0].ModelProvider)
+						require.Len(t, req.Spec.ModelDeployments[0].Accelerators, 1)
+						require.Equal(t, uint64(1), req.Spec.ModelDeployments[0].Accelerators[0].Scale)
+						require.Equal(t, "prefill_decode", req.Spec.ModelDeployments[0].Accelerators[0].Type)
 						return updatedDI, &godo.Response{}, nil
 					})
 			},
@@ -537,4 +760,41 @@ func TestDedicatedInferenceTool_Tools(t *testing.T) {
 	require.True(t, toolNames["dedicated-inference-list"])
 	require.True(t, toolNames["dedicated-inference-update"])
 	require.True(t, toolNames["dedicated-inference-delete"])
+}
+
+func TestDedicatedInferenceTool_clientError(t *testing.T) {
+	tool := setupToolWithClientError()
+	req := mcp.CallToolRequest{Params: mcp.CallToolParams{Arguments: map[string]any{
+		"DedicatedInferenceID": "di-uuid-1234",
+		"Name":                 "test",
+		"Region":               "nyc2",
+		"ModelDeployments": []any{
+			map[string]any{
+				"ModelSlug":     "deepseek-ai/DeepSeek-R1",
+				"ModelProvider": "hugging_face",
+				"Accelerators": []any{
+					map[string]any{"AcceleratorSlug": "gpu-h100x8", "Scale": float64(1), "Type": "prefill_decode"},
+				},
+			},
+		},
+	}}}
+
+	handlers := []struct {
+		name string
+		fn   func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error)
+	}{
+		{"create", tool.createDedicatedInference},
+		{"get", tool.getDedicatedInference},
+		{"list", tool.listDedicatedInferences},
+		{"update", tool.updateDedicatedInference},
+		{"delete", tool.deleteDedicatedInference},
+	}
+
+	for _, h := range handlers {
+		t.Run(h.name, func(t *testing.T) {
+			_, err := h.fn(context.Background(), req)
+			require.Error(t, err)
+			require.Contains(t, err.Error(), "auth failed")
+		})
+	}
 }
