@@ -16,6 +16,7 @@ import (
 	"mcp-digitalocean/pkg/registry/droplet"
 	"mcp-digitalocean/pkg/registry/functions"
 	genaimodelcatalog "mcp-digitalocean/pkg/registry/genai-modelcatalog"
+	gradientai "mcp-digitalocean/pkg/registry/gradient-ai"
 	"mcp-digitalocean/pkg/registry/insights"
 	"mcp-digitalocean/pkg/registry/marketplace"
 	"mcp-digitalocean/pkg/registry/networking"
@@ -37,6 +38,7 @@ var supportedServices = map[string]struct{}{
 	"spaces":             {},
 	"databases":          {},
 	"marketplace":        {},
+	"gradient-ai":        {},
 	"genai-modelcatalog": {},
 	"insights":           {},
 	"doks":               {},
@@ -115,6 +117,12 @@ func registerSpacesTools(s *server.MCPServer, getClient getClientFn) error {
 func registerMarketplaceTools(s *server.MCPServer, getClient getClientFn) error {
 	s.AddTools(marketplace.NewOneClickTool(getClient).Tools()...)
 
+	return nil
+}
+
+// registerGradientAITools registers the Gradient AI dedicated inference tools with the MCP server.
+func registerGradientAITools(s *server.MCPServer, getClient getClientFn) error {
+	s.AddTools(gradientai.NewDedicatedInferenceTool(getClient).Tools()...)
 	return nil
 }
 
@@ -223,6 +231,10 @@ func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, s
 		case "marketplace":
 			if err := registerMarketplaceTools(s, getClient); err != nil {
 				return fmt.Errorf("failed to register marketplace tools: %w", err)
+			}
+		case "gradient-ai":
+			if err := registerGradientAITools(s, getClient); err != nil {
+				return fmt.Errorf("failed to register gradient-ai tools: %w", err)
 			}
 		case "genai-modelcatalog":
 			if err := registerModelCatalogTools(s, getClient); err != nil {
