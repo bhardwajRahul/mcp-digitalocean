@@ -520,6 +520,17 @@ func TestDedicatedInferenceTool_update(t *testing.T) {
 		Status: "UPDATING",
 	}
 
+	minimalValidModelDeployments := []any{
+		map[string]any{
+			"ModelSlug":     "deepseek-ai/DeepSeek-R1",
+			"ModelProvider": "hugging_face",
+			"ModelID":       "model-deploy-uuid-1",
+			"Accelerators": []any{
+				map[string]any{"AcceleratorSlug": "gpu-h100x8", "Scale": float64(1), "Type": "prefill_decode"},
+			},
+		},
+	}
+
 	tests := []struct {
 		name        string
 		args        map[string]any
@@ -532,8 +543,22 @@ func TestDedicatedInferenceTool_update(t *testing.T) {
 			expectError: true,
 		},
 		{
+			name:        "missing ModelDeployments",
+			args:        map[string]any{"DedicatedInferenceID": "di-uuid-1234", "Name": "updated-inference"},
+			expectError: true,
+		},
+		{
+			name:        "empty ModelDeployments",
+			args:        map[string]any{"DedicatedInferenceID": "di-uuid-1234", "ModelDeployments": []any{}},
+			expectError: true,
+		},
+		{
 			name: "api error",
-			args: map[string]any{"DedicatedInferenceID": "di-uuid-1234", "Name": "new-name"},
+			args: map[string]any{
+				"DedicatedInferenceID": "di-uuid-1234",
+				"Name":                 "new-name",
+				"ModelDeployments":     minimalValidModelDeployments,
+			},
 			mockSetup: func(m *MockDedicatedInferenceService) {
 				m.EXPECT().Update(gomock.Any(), "di-uuid-1234", gomock.Any()).Return(nil, nil, errors.New("api error"))
 			},
@@ -541,7 +566,11 @@ func TestDedicatedInferenceTool_update(t *testing.T) {
 		},
 		{
 			name: "success with name update",
-			args: map[string]any{"DedicatedInferenceID": "di-uuid-1234", "Name": "updated-inference"},
+			args: map[string]any{
+				"DedicatedInferenceID": "di-uuid-1234",
+				"Name":                 "updated-inference",
+				"ModelDeployments":     minimalValidModelDeployments,
+			},
 			mockSetup: func(m *MockDedicatedInferenceService) {
 				m.EXPECT().Update(gomock.Any(), "di-uuid-1234", gomock.Any()).
 					DoAndReturn(func(_ context.Context, id string, req *godo.DedicatedInferenceUpdateRequest) (*godo.DedicatedInference, *godo.Response, error) {
@@ -555,6 +584,7 @@ func TestDedicatedInferenceTool_update(t *testing.T) {
 			args: map[string]any{
 				"DedicatedInferenceID": "di-uuid-1234",
 				"HuggingFaceToken":     "hf_new_token",
+				"ModelDeployments":     minimalValidModelDeployments,
 			},
 			mockSetup: func(m *MockDedicatedInferenceService) {
 				m.EXPECT().Update(gomock.Any(), "di-uuid-1234", gomock.Any()).
@@ -570,6 +600,7 @@ func TestDedicatedInferenceTool_update(t *testing.T) {
 			args: map[string]any{
 				"DedicatedInferenceID": "di-uuid-1234",
 				"Region":               "tor1",
+				"ModelDeployments":     minimalValidModelDeployments,
 			},
 			mockSetup: func(m *MockDedicatedInferenceService) {
 				m.EXPECT().Update(gomock.Any(), "di-uuid-1234", gomock.Any()).
@@ -584,6 +615,7 @@ func TestDedicatedInferenceTool_update(t *testing.T) {
 			args: map[string]any{
 				"DedicatedInferenceID": "di-uuid-1234",
 				"EnablePublicEndpoint": true,
+				"ModelDeployments":     minimalValidModelDeployments,
 			},
 			mockSetup: func(m *MockDedicatedInferenceService) {
 				m.EXPECT().Update(gomock.Any(), "di-uuid-1234", gomock.Any()).
@@ -598,6 +630,7 @@ func TestDedicatedInferenceTool_update(t *testing.T) {
 			args: map[string]any{
 				"DedicatedInferenceID": "di-uuid-1234",
 				"VPCUUID":              "new-vpc-uuid",
+				"ModelDeployments":     minimalValidModelDeployments,
 			},
 			mockSetup: func(m *MockDedicatedInferenceService) {
 				m.EXPECT().Update(gomock.Any(), "di-uuid-1234", gomock.Any()).

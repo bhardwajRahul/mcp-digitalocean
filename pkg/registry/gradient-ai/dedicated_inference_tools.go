@@ -175,6 +175,9 @@ func (d *DedicatedInferenceTool) updateDedicatedInference(ctx context.Context, r
 	}
 
 	spec.ModelDeployments = parseModelDeployments(args)
+	if len(spec.ModelDeployments) == 0 {
+		return mcp.NewToolResultError("ModelDeployments is required and must not be empty"), nil
+	}
 
 	updateReq := &godo.DedicatedInferenceUpdateRequest{
 		Spec: spec,
@@ -269,6 +272,7 @@ func (d *DedicatedInferenceTool) Tools() []server.ServerTool {
 			Tool: mcp.NewTool(
 				"dedicated-inference-delete",
 				mcp.WithDescription("Delete a Dedicated Inference instance (DeleteDedicatedInferenceV2)."),
+				mcp.WithDestructiveHintAnnotation(true),
 				mcp.WithString("DedicatedInferenceID", mcp.Required(), mcp.Description("UUID of the dedicated inference instance to delete")),
 			),
 		},
