@@ -594,6 +594,7 @@ Each service provides a detailed README describing all available tools, resource
 - [Marketplace Service](pkg/registry/marketplace/README.md)
 - [DOKS Service](pkg/registry/doks/README.md)
 - [DOCR Service](pkg/registry/docr/README.md)
+- [Gradient AI Service](pkg/registry/gradient-ai/README.md)
 
 ## Example Tools
 
