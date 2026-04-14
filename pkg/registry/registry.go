@@ -12,8 +12,10 @@ import (
 	"mcp-digitalocean/pkg/registry/dbaas"
 	gradientai "mcp-digitalocean/pkg/registry/gradient-ai"
 	"mcp-digitalocean/pkg/registry/docr"
+	"mcp-digitalocean/pkg/registry/docs"
 	"mcp-digitalocean/pkg/registry/doks"
 	"mcp-digitalocean/pkg/registry/droplet"
+	"mcp-digitalocean/pkg/registry/functions"
 	genaimodelcatalog "mcp-digitalocean/pkg/registry/genai-modelcatalog"
 	"mcp-digitalocean/pkg/registry/insights"
 	"mcp-digitalocean/pkg/registry/marketplace"
@@ -41,7 +43,9 @@ var supportedServices = map[string]struct{}{
 	"insights":           {},
 	"doks":               {},
 	"docr":               {},
+	"docs":               {},
 	"volumes":            {},
+	"functions":          {},
 }
 
 // registerAppTools registers the app platform tools with the MCP server.
@@ -141,11 +145,29 @@ func registerDOKSTools(s *server.MCPServer, getClient getClientFn) error {
 	return nil
 }
 
+// registerDocsTools registers the documentation tools with the MCP server.
+// Unlike other services, docs tools do not require a DigitalOcean API client
+// since they access public documentation.
+func registerDocsTools(s *server.MCPServer) error {
+	s.AddTools(docs.NewDocsTool().Tools()...)
+	return nil
+}
+
 func registerDOCRTools(s *server.MCPServer, getClient getClientFn) error {
 	s.AddTools(docr.NewRegistryTool(getClient).Tools()...)
 	s.AddTools(docr.NewRepositoryTool(getClient).Tools()...)
 	s.AddTools(docr.NewGarbageCollectionTool(getClient).Tools()...)
 	s.AddTools(docr.NewSubscriptionTool(getClient).Tools()...)
+	return nil
+}
+
+func registerFunctionsTools(s *server.MCPServer, getClient getClientFn) error {
+	resolver := functions.NewOWResolver(getClient)
+	s.AddTools(functions.NewNamespaceTool(getClient).Tools()...)
+	s.AddTools(functions.NewTriggerTool(getClient).Tools()...)
+	s.AddTools(functions.NewActionTool(resolver).Tools()...)
+	s.AddTools(functions.NewPackageTool(resolver).Tools()...)
+	s.AddTools(functions.NewActivationTool(resolver).Tools()...)
 	return nil
 }
 
@@ -178,6 +200,7 @@ func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, s
 			servicesToActivate = append(servicesToActivate, k)
 		}
 	}
+
 	for _, svc := range servicesToActivate {
 		logger.Debug(fmt.Sprintf("Registering tool and resources for service: %s", svc))
 		switch svc {
@@ -229,9 +252,17 @@ func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, s
 			if err := registerDOCRTools(s, getClient); err != nil {
 				return fmt.Errorf("failed to register DOCR tools: %w", err)
 			}
+		case "docs":
+			if err := registerDocsTools(s); err != nil {
+				return fmt.Errorf("failed to register docs tools: %w", err)
+			}
 		case "volumes":
 			if err := registerVolumesTools(s, getClient); err != nil {
 				return fmt.Errorf("failed to register volumes tools: %w", err)
+			}
+		case "functions":
+			if err := registerFunctionsTools(s, getClient); err != nil {
+				return fmt.Errorf("failed to register functions tools: %w", err)
 			}
 		default:
 			return fmt.Errorf("unsupported service: %s, supported service are: %v", svc, setToString(supportedServices))
