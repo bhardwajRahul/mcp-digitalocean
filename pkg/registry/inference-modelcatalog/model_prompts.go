@@ -16,7 +16,7 @@ import (
 const (
 	modalityInput       = "input"
 	modalityOutput      = "output"
-	maxConcurrentFetch  = 10 // Number of parallel API calls
+	maxConcurrentFetch  = 20 // Number of parallel API calls
 	targetMatchingCount = 10 // Stop after finding this many matches
 )
 
