@@ -262,7 +262,7 @@ func TestModelTool_getModelCard(t *testing.T) {
 				require.NotNil(t, result.Pricing, "should include pricing")
 				require.Equal(t, testModel.Pricing.InputPricePerMillion, result.Pricing.InputPricePerMillion, "should return exact input price")
 				require.Equal(t, testModel.Pricing.OutputPricePerMillion, result.Pricing.OutputPricePerMillion, "should return exact output price")
-				
+
 				// Compare benchmark score as JSON (ignore formatting differences)
 				if len(testModel.BenchmarkScore) > 0 {
 					var expectedBenchmark, actualBenchmark map[string]interface{}
@@ -270,7 +270,7 @@ func TestModelTool_getModelCard(t *testing.T) {
 					require.NoError(t, json.Unmarshal(result.BenchmarkScore, &actualBenchmark), "should unmarshal actual benchmark")
 					require.Equal(t, expectedBenchmark, actualBenchmark, "should return same benchmark data")
 				}
-				
+
 				require.NotNil(t, result.Agreement, "should include agreement")
 				require.Equal(t, testModel.Agreement.Name, result.Agreement.Name, "should return exact agreement name")
 				require.Equal(t, testModel.Agreement.Description, result.Agreement.Description, "should return exact agreement description")

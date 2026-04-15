@@ -15,8 +15,8 @@ import (
 	"mcp-digitalocean/pkg/registry/doks"
 	"mcp-digitalocean/pkg/registry/droplet"
 	"mcp-digitalocean/pkg/registry/functions"
-	inferencemodelcatalog "mcp-digitalocean/pkg/registry/inference-modelcatalog"
 	gradientai "mcp-digitalocean/pkg/registry/gradient-ai"
+	inferencemodelcatalog "mcp-digitalocean/pkg/registry/inference-modelcatalog"
 	"mcp-digitalocean/pkg/registry/insights"
 	"mcp-digitalocean/pkg/registry/marketplace"
 	"mcp-digitalocean/pkg/registry/networking"
@@ -31,21 +31,21 @@ type getClientFn func(ctx context.Context) (*godo.Client, error)
 
 // supportedServices is a set of services that we support in this MCP server.
 var supportedServices = map[string]struct{}{
-	"apps":                    {},
-	"networking":              {},
-	"droplets":                {},
-	"accounts":                {},
-	"spaces":                  {},
-	"databases":               {},
-	"marketplace":             {},
-	"gradient-ai":             {},
-	"inference-modelcatalog":  {},
-	"insights":                {},
-	"doks":                    {},
-	"docr":                    {},
-	"docs":                    {},
-	"volumes":                 {},
-	"functions":               {},
+	"apps":                   {},
+	"networking":             {},
+	"droplets":               {},
+	"accounts":               {},
+	"spaces":                 {},
+	"databases":              {},
+	"marketplace":            {},
+	"gradient-ai":            {},
+	"inference-modelcatalog": {},
+	"insights":               {},
+	"doks":                   {},
+	"docr":                   {},
+	"docs":                   {},
+	"volumes":                {},
+	"functions":              {},
 }
 
 // registerAppTools registers the app platform tools with the MCP server.

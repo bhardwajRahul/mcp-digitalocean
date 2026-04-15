@@ -65,12 +65,12 @@ func formatModelComparison(model1, model2 *ModelMetadata) string {
 	var sb strings.Builder
 
 	sb.WriteString("# Model Comparison\n\n")
-	
+
 	// Single comprehensive comparison table
 	sb.WriteString(fmt.Sprintf("| Model | %s | %s |\n", model1.Name, model2.Name))
 	sb.WriteString("|---|---|---|\n")
 	sb.WriteString(fmt.Sprintf("| **UUID** | %s | %s |\n", model1.UUID, model2.UUID))
-	
+
 	// Only show fields that have values in at least one model
 	if model1.Provider != "" || model2.Provider != "" {
 		sb.WriteString(fmt.Sprintf("| **Provider** | %s | %s |\n", formatOptionalString(model1.Provider), formatOptionalString(model2.Provider)))
@@ -101,7 +101,7 @@ func formatModelComparison(model1, model2 *ModelMetadata) string {
 	if model1.ModelAvailability != "" || model2.ModelAvailability != "" {
 		sb.WriteString(fmt.Sprintf("| **Availability** | %s | %s |\n", formatOptionalString(model1.ModelAvailability), formatOptionalString(model2.ModelAvailability)))
 	}
-	
+
 	// Add descriptions if available
 	if model1.Description != "" || model2.Description != "" {
 		sb.WriteString("\n## Descriptions\n\n")
@@ -126,25 +126,25 @@ func (m *ModelTool) handleSearchByTask(ctx context.Context, req mcp.GetPromptReq
 	task := args["Task"]
 
 	var constraints taskConstraints
-	
+
 	if provider, ok := args["Provider"]; ok && provider != "" {
 		p := strings.ToLower(provider)
 		constraints.provider = &p
 	}
-	
+
 	if deploymentType, ok := args["DeploymentType"]; ok && deploymentType != "" {
 		dt := strings.ToLower(deploymentType)
 		constraints.deploymentType = &dt
 	}
-	
+
 	if minCtxWindow, ok := args["MinContextWindow"]; ok && minCtxWindow != "" {
 		constraints.minContextWindow = &minCtxWindow
 	}
-	
+
 	if maxInputPrice, ok := args["MaxInputPrice"]; ok && maxInputPrice != "" {
 		constraints.maxInputPrice = &maxInputPrice
 	}
-	
+
 	if maxOutputPrice, ok := args["MaxOutputPrice"]; ok && maxOutputPrice != "" {
 		constraints.maxOutputPrice = &maxOutputPrice
 	}
@@ -232,24 +232,24 @@ func matchesConstraints(model *ModelMetadata, constraints taskConstraints) bool 
 // matchesTask checks if a model is relevant for the given task
 func matchesTask(model *ModelMetadata, task string) bool {
 	taskLower := strings.ToLower(task)
-	
+
 	// Collect important fields from the model
 	fieldsToCheck := []string{
 		model.Name,
 		model.Provider,
 		model.Type,
 	}
-	
+
 	// Add capabilities to fields
 	fieldsToCheck = append(fieldsToCheck, model.Capabilities...)
-	
+
 	// Check if task contains any of these fields
 	for _, field := range fieldsToCheck {
 		if field != "" && strings.Contains(taskLower, strings.ToLower(field)) {
 			return true
 		}
 	}
-	
+
 	// No match - exclude this model
 	return false
 }
@@ -439,13 +439,13 @@ func formatContextWindow(contextWindow string) string {
 	if contextWindow == "" {
 		return "—"
 	}
-	
+
 	// Parse the value
 	val := parseContextWindow(contextWindow)
 	if val == 0 {
 		return "—"
 	}
-	
+
 	// Format consistently as K tokens
 	if val >= 1000 {
 		if val%1000 == 0 {
@@ -460,7 +460,7 @@ func parseContextWindow(contextWindow string) int {
 	if contextWindow == "" {
 		return 0
 	}
-	
+
 	// Use a replacer for efficient multiple string replacements
 	replacer := strings.NewReplacer(
 		",", "",
@@ -469,7 +469,7 @@ func parseContextWindow(contextWindow string) int {
 		"K", "000",
 		"k", "000",
 	)
-	
+
 	cleaned := strings.TrimSpace(replacer.Replace(contextWindow))
 	val, err := strconv.Atoi(cleaned)
 	if err != nil {
@@ -482,18 +482,18 @@ func formatPrice(pricing *godo.ModelPricing, isInput bool) string {
 	if pricing == nil {
 		return "—"
 	}
-	
+
 	var price float64
 	if isInput {
 		price = pricing.InputPricePerMillion
 	} else {
 		price = pricing.OutputPricePerMillion
 	}
-	
+
 	if price == 0 {
 		return "—"
 	}
-	
+
 	return fmt.Sprintf("$%.2f/M tokens", price)
 }
 
