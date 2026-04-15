@@ -1,4 +1,4 @@
-package genaimodelcatalog
+package inferencemodelcatalog
 
 import (
 	"context"
@@ -300,6 +300,6 @@ func TestModelTool_Tools(t *testing.T) {
 		toolNames[t.Tool.Name] = true
 	}
 
-	require.True(t, toolNames["genai-model-catalog-search"], "should have genai-model-catalog-search tool")
-	require.True(t, toolNames["genai-model-catalog-get-card"], "should have genai-model-catalog-get-card tool")
+	require.True(t, toolNames["inference-model-catalog-search"], "should have inference-model-catalog-search tool")
+	require.True(t, toolNames["inference-model-catalog-get-card"], "should have inference-model-catalog-get-card tool")
 }

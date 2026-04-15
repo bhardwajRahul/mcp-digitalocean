@@ -20,7 +20,7 @@ func TestModelCatalogSearch(t *testing.T) {
 		ModelUUIDs  []string `json:"model_uuids"`
 		SearchQuery string   `json:"search_query"`
 		Count       int      `json:"count"`
-	}](t, "genai-model-catalog-search", map[string]interface{}{
+	}](t, "inference-model-catalog-search", map[string]interface{}{
 		"SearchQuery": "llama",
 	})
 
@@ -34,7 +34,7 @@ func TestModelCatalogSearch(t *testing.T) {
 		ModelUUIDs  []string `json:"model_uuids"`
 		SearchQuery string   `json:"search_query"`
 		Count       int      `json:"count"`
-	}](t, "genai-model-catalog-search", map[string]interface{}{
+	}](t, "inference-model-catalog-search", map[string]interface{}{
 		"SearchQuery": "",
 	})
 
@@ -49,7 +49,7 @@ func TestModelCatalogSearch(t *testing.T) {
 		ModelUUIDs  []string `json:"model_uuids"`
 		SearchQuery string   `json:"search_query"`
 		Count       int      `json:"count"`
-	}](t, "genai-model-catalog-search", map[string]interface{}{})
+	}](t, "inference-model-catalog-search", map[string]interface{}{})
 
 	require.NotNil(t, allModelsNoParam)
 	require.Equal(t, "", allModelsNoParam.SearchQuery, "missing parameter should default to empty string")
@@ -63,7 +63,7 @@ func TestModelCatalogSearch(t *testing.T) {
 		ModelUUIDs  []string `json:"model_uuids"`
 		SearchQuery string   `json:"search_query"`
 		Count       int      `json:"count"`
-	}](t, "genai-model-catalog-search", map[string]interface{}{
+	}](t, "inference-model-catalog-search", map[string]interface{}{
 		"SearchQuery": "nonexistent-model-xyz-123",
 	})
 
@@ -82,7 +82,7 @@ func TestModelCatalogGetCard(t *testing.T) {
 		ModelUUIDs  []string `json:"model_uuids"`
 		SearchQuery string   `json:"search_query"`
 		Count       int      `json:"count"`
-	}](t, "genai-model-catalog-search", map[string]interface{}{
+	}](t, "inference-model-catalog-search", map[string]interface{}{
 		"SearchQuery": searchQuery,
 	})
 
@@ -108,7 +108,7 @@ func TestModelCatalogGetCard(t *testing.T) {
 		Type              string                `json:"type,omitempty"`
 		Pricing           *godo.ModelPricing    `json:"pricing,omitempty"`
 		BenchmarkScore    json.RawMessage       `json:"benchmark_score,omitempty"`
-	}](t, "genai-model-catalog-get-card", map[string]interface{}{
+	}](t, "inference-model-catalog-get-card", map[string]interface{}{
 		"ModelUUID": testUUID,
 	})
 
@@ -163,7 +163,7 @@ func TestModelCatalogGetCardNotFound(t *testing.T) {
 
 	resp, err := c.CallTool(ctx, mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
-			Name: "genai-model-catalog-get-card",
+			Name: "inference-model-catalog-get-card",
 			Arguments: map[string]interface{}{
 				"ModelUUID": fakeUUID,
 			},
@@ -194,7 +194,7 @@ func TestModelCatalogWorkflow(t *testing.T) {
 		ModelUUIDs  []string `json:"model_uuids"`
 		SearchQuery string   `json:"search_query"`
 		Count       int      `json:"count"`
-	}](t, "genai-model-catalog-search", map[string]interface{}{
+	}](t, "inference-model-catalog-search", map[string]interface{}{
 		"SearchQuery": searchQuery,
 	})
 
@@ -228,7 +228,7 @@ func TestModelCatalogWorkflow(t *testing.T) {
 			Type              string                `json:"type,omitempty"`
 			Pricing           *godo.ModelPricing    `json:"pricing,omitempty"`
 			BenchmarkScore    json.RawMessage       `json:"benchmark_score,omitempty"`
-		}](t, "genai-model-catalog-get-card", map[string]interface{}{
+		}](t, "inference-model-catalog-get-card", map[string]interface{}{
 			"ModelUUID": uuid,
 		})
 
@@ -260,7 +260,7 @@ func TestModelComparisonPrompt(t *testing.T) {
 		ModelUUIDs  []string `json:"model_uuids"`
 		SearchQuery string   `json:"search_query"`
 		Count       int      `json:"count"`
-	}](t, "genai-model-catalog-search", map[string]interface{}{
+	}](t, "inference-model-catalog-search", map[string]interface{}{
 		"SearchQuery": "gpt",
 	})
 

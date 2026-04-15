@@ -1,4 +1,4 @@
-package genaimodelcatalog
+package inferencemodelcatalog
 
 import (
 	"context"
