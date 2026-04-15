@@ -1,46 +1,76 @@
 ## Model Catalog MCP Tools
 
-This directory contains tools for managing DigitalOcean Model Catalog via the MCP Server. The Model Catalog provides access to AI models available on DigitalOcean's Inference platform. All operations are exposed as tools with argument-based input—no resource URIs are used.
+This directory contains tools and prompts for managing DigitalOcean Model Catalog via the MCP Server. The Model Catalog provides access to AI models available on DigitalOcean's Inference platform.
 
 ---
 
-## Supported Tools
-
-### Model Catalog Tools
+## Tools
 
 - **inference-model-catalog-search**  
-  Search for models in the catalog using a search query. Returns a list of model UUIDs that match the search criteria.  
-  **Arguments:**  
-  - `SearchQuery` (string, optional): Search query string to find models. An empty or missing query returns all available models.
+  Search for models in the catalog. Returns model UUIDs matching the search criteria.  
+  **Arguments:** `SearchQuery` (optional) - Search string. Empty returns all models.
 
 - **inference-model-catalog-get-card**  
-  Get the model metadata for a specific model UUID.  
+  Get detailed metadata for a specific model.  
+  **Arguments:** `ModelUUID` (required) - The model's UUID.
+
+## Prompts
+
+- **model-comparison**  
+  Compare two models side-by-side with detailed metrics (pricing, parameters, capabilities, performance).  
+  **Arguments:** `ModelUUID1`, `ModelUUID2` (both required)
+
+- **search-by-task**  
+  Find models matching a task with optional constraints (provider, deployment type, pricing, context window).  
   **Arguments:**  
-  - `ModelUUID` (string, required): The unique UUID identifier of the model
+  - `Task` (optional) - Task description (e.g., "low-latency chat")
+  - `Provider` (optional) - Filter by provider (e.g., "OpenAI", "Meta")
+  - `DeploymentType` (optional) - "serverless" or "dedicated"
+  - `MinContextWindow` (optional) - Minimum tokens (e.g., "100000")
+  - `MaxInputPrice` (optional) - Max input price per million tokens (e.g., "5.0")
+  - `MaxOutputPrice` (optional) - Max output price per million tokens (e.g., "15.0")
 
 ---
 
 ## Example Usage
 
-- **Search for models by name:**  
-  Tool: `inference-model-catalog-search`  
-  Arguments:  
-  - `SearchQuery`: `"llama"`
+**Search models:**
+```
+Tool: inference-model-catalog-search
+Args: {"SearchQuery": "llama"}
+```
 
-- **List all available models:**  
-  Tool: `inference-model-catalog-search`  
-  Arguments: `{}` or `{"SearchQuery": ""}`
+**Get model details:**
+```
+Tool: inference-model-catalog-get-card
+Args: {"ModelUUID": "12345678-1234-1234-1234-123456789012"}
+```
 
-- **Get model details:**  
-  Tool: `inference-model-catalog-get-card`  
-  Arguments:  
-  - `ModelUUID`: `"12345678-1234-1234-1234-123456789012"`
+**Compare two models:**
+```
+Prompt: model-comparison
+Args: {
+  "ModelUUID1": "uuid-1",
+  "ModelUUID2": "uuid-2"
+}
+```
+
+**Find models for a task:**
+```
+Prompt: search-by-task
+Args: {
+  "Task": "low-latency chat",
+  "Provider": "meta",
+  "MaxInputPrice": "5.0"
+}
+```
 
 ---
 
 ## Notes
 
-- The search is case-insensitive and matches against model names
-- An empty or missing `SearchQuery` returns all available models
-- A valid DigitalOcean API token is required for all operations
-- Model UUIDs are stable identifiers that can be used for deployment and API access
+- Empty `SearchQuery` returns all available models
+- All price values are per million tokens
+- Context window values can be specified with or without "K" suffix (e.g., "128K" or "128000")
+- Provider and deployment type matching is case-insensitive
+- A valid DigitalOcean API token is required
