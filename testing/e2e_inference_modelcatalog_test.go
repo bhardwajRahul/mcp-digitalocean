@@ -400,4 +400,3 @@ func TestModelComparisonPromptInvalidUUID(t *testing.T) {
 	require.Error(t, err, "should return error for invalid UUIDs")
 	t.Logf("correctly returned error: %v", err)
 }
-
