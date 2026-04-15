@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/digitalocean/godo"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -13,9 +14,10 @@ import (
 )
 
 const (
-	modalityInput      = "input"
-	modalityOutput     = "output"
-	maxModelsToProcess = 20 // Limit to prevent timeouts on broad searches
+	modalityInput       = "input"
+	modalityOutput      = "output"
+	maxConcurrentFetch  = 10 // Number of parallel API calls
+	targetMatchingCount = 10 // Stop after finding this many matches
 )
 
 // handleModelComparison compares two models side-by-side
@@ -158,34 +160,73 @@ func (m *ModelTool) handleSearchByTask(ctx context.Context, req mcp.GetPromptReq
 		return nil, fmt.Errorf("failed to search models: %w", err)
 	}
 
-	var matchingModels []*ModelMetadata
-	processedCount := 0
-	for _, uuid := range uuids {
-		if processedCount >= maxModelsToProcess {
-			break
-		}
-		processedCount++
+	// Create a cancellable context to stop fetching once we have enough matches
+	fetchCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-		model, err := m.getModelMetadata(ctx, uuid)
-		if err != nil {
+	// Fetch models in parallel with controlled concurrency
+	type modelResult struct {
+		model *ModelMetadata
+		err   error
+	}
+
+	results := make(chan modelResult, targetMatchingCount)
+	semaphore := make(chan struct{}, maxConcurrentFetch)
+
+	var wg sync.WaitGroup
+	for _, uuid := range uuids {
+		wg.Add(1)
+		go func(uuid string) {
+			defer wg.Done()
+
+			// Acquire semaphore or stop if cancelled
+			select {
+			case <-fetchCtx.Done():
+				return
+			case semaphore <- struct{}{}:
+				defer func() { <-semaphore }()
+			}
+
+			// Fetch model metadata (will fail if context cancelled)
+			model, err := m.getModelMetadata(fetchCtx, uuid)
+
+			// Send result (non-blocking if context cancelled)
+			select {
+			case results <- modelResult{model: model, err: err}:
+			case <-fetchCtx.Done():
+			}
+		}(uuid)
+	}
+
+	// Close results channel when all goroutines complete
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Collect and filter results
+	var matchingModels []*ModelMetadata
+	for result := range results {
+		if result.err != nil {
 			continue
 		}
 
 		// Filter by parsed constraints
-		if !matchesConstraints(model, constraints) {
+		if !matchesConstraints(result.model, constraints) {
 			continue
 		}
 
 		// Filter by task relevance if task is provided
-		if task != "" && !matchesTask(model, task) {
+		if task != "" && !matchesTask(result.model, task) {
 			continue
 		}
 
-		matchingModels = append(matchingModels, model)
+		matchingModels = append(matchingModels, result.model)
 
-		// Stop early if we have enough good matches
-		if len(matchingModels) >= 10 {
-			break
+		// Stop fetching once we have enough good matches
+		if len(matchingModels) >= targetMatchingCount {
+			cancel() // Signal all goroutines to stop
+			break    // Stop collecting results
 		}
 	}
 
