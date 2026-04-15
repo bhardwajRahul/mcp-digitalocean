@@ -144,6 +144,11 @@ func TestModelTool_getModelCard(t *testing.T) {
 		},
 		ParameterCount: 70.0,
 		Type:           "chat",
+		Pricing: &godo.ModelPricing{
+			InputPricePerMillion:  3.0,
+			OutputPricePerMillion: 15.0,
+		},
+		BenchmarkScore: json.RawMessage(`{"mmlu": 0.85, "hellaswag": 0.79}`),
 		Agreement: &godo.Agreement{
 			Name:        "Meta Llama 3.3 License",
 			Description: "License for Llama 3.3",
@@ -240,6 +245,8 @@ func TestModelTool_getModelCard(t *testing.T) {
 					Modalities        *godo.ModelModalities `json:"modalities,omitempty"`
 					ParameterCount    float64               `json:"parameter_count,omitempty"`
 					Type              string                `json:"type,omitempty"`
+					Pricing           *godo.ModelPricing    `json:"pricing,omitempty"`
+					BenchmarkScore    json.RawMessage       `json:"benchmark_score,omitempty"`
 				}
 				err := json.Unmarshal([]byte(textContent.Text), &result)
 				require.NoError(t, err)
@@ -252,6 +259,18 @@ func TestModelTool_getModelCard(t *testing.T) {
 				require.Equal(t, testModel.Capabilities, result.Capabilities, "should return exact capabilities")
 				require.Equal(t, testModel.ParameterCount, result.ParameterCount, "should return exact parameter count")
 				require.Equal(t, testModel.Type, result.Type, "should return exact type")
+				require.NotNil(t, result.Pricing, "should include pricing")
+				require.Equal(t, testModel.Pricing.InputPricePerMillion, result.Pricing.InputPricePerMillion, "should return exact input price")
+				require.Equal(t, testModel.Pricing.OutputPricePerMillion, result.Pricing.OutputPricePerMillion, "should return exact output price")
+				
+				// Compare benchmark score as JSON (ignore formatting differences)
+				if len(testModel.BenchmarkScore) > 0 {
+					var expectedBenchmark, actualBenchmark map[string]interface{}
+					require.NoError(t, json.Unmarshal(testModel.BenchmarkScore, &expectedBenchmark), "should unmarshal expected benchmark")
+					require.NoError(t, json.Unmarshal(result.BenchmarkScore, &actualBenchmark), "should unmarshal actual benchmark")
+					require.Equal(t, expectedBenchmark, actualBenchmark, "should return same benchmark data")
+				}
+				
 				require.NotNil(t, result.Agreement, "should include agreement")
 				require.Equal(t, testModel.Agreement.Name, result.Agreement.Name, "should return exact agreement name")
 				require.Equal(t, testModel.Agreement.Description, result.Agreement.Description, "should return exact agreement description")

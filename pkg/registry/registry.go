@@ -128,7 +128,9 @@ func registerGradientAITools(s *server.MCPServer, getClient getClientFn) error {
 
 // registerModelCatalogTools registers the model catalog tools with the MCP server.
 func registerModelCatalogTools(s *server.MCPServer, getClient getClientFn) error {
-	s.AddTools(genaimodelcatalog.NewModelTool(getClient).Tools()...)
+	modelTool := genaimodelcatalog.NewModelTool(getClient)
+	s.AddTools(modelTool.Tools()...)
+	s.AddPrompts(modelTool.Prompts()...)
 	return nil
 }
 

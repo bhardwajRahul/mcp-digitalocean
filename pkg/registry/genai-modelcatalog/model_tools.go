@@ -15,11 +15,61 @@ type ModelTool struct {
 	client func(ctx context.Context) (*godo.Client, error)
 }
 
+// ModelMetadata represents model card metadata
+type ModelMetadata struct {
+	UUID              string                `json:"uuid"`
+	Name              string                `json:"name"`
+	Description       string                `json:"description,omitempty"`
+	Provider          string                `json:"provider,omitempty"`
+	Agreement         *godo.Agreement       `json:"agreement,omitempty"`
+	ModelAvailability string                `json:"model_availability,omitempty"`
+	ContextWindow     string                `json:"context_window,omitempty"`
+	Capabilities      []string              `json:"capabilities,omitempty"`
+	Modalities        *godo.ModelModalities `json:"modalities,omitempty"`
+	ParameterCount    float64               `json:"parameter_count,omitempty"`
+	Type              string                `json:"type,omitempty"`
+	Pricing           *godo.ModelPricing    `json:"pricing,omitempty"`
+	BenchmarkScore    json.RawMessage       `json:"benchmark_score,omitempty"`
+}
+
 // NewModelTool creates a new ModelTool instance
 func NewModelTool(client func(ctx context.Context) (*godo.Client, error)) *ModelTool {
 	return &ModelTool{
 		client: client,
 	}
+}
+
+// getModelMetadata fetches model card data and returns it as ModelMetadata
+func (m *ModelTool) getModelMetadata(ctx context.Context, modelUUID string) (*ModelMetadata, error) {
+	client, err := m.client(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
+	}
+
+	model, _, err := client.GradientAI.GetModelByUUID(ctx, modelUUID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get model: %w", err)
+	}
+
+	if model == nil {
+		return nil, fmt.Errorf("model with UUID '%s' not found", modelUUID)
+	}
+
+	return &ModelMetadata{
+		UUID:              model.Uuid,
+		Name:              model.Name,
+		Description:       model.Description,
+		Provider:          model.Provider,
+		Agreement:         model.Agreement,
+		ModelAvailability: model.ModelAvailability,
+		ContextWindow:     model.ContextWindow,
+		Capabilities:      model.Capabilities,
+		Modalities:        model.Modalities,
+		ParameterCount:    model.ParameterCount,
+		Type:              model.Type,
+		Pricing:           model.Pricing,
+		BenchmarkScore:    model.BenchmarkScore,
+	}, nil
 }
 
 // searchModels searches for models in the catalog using a search string
@@ -67,46 +117,9 @@ func (m *ModelTool) getModelCard(ctx context.Context, req mcp.CallToolRequest) (
 		return mcp.NewToolResultError("ModelUUID is required"), nil
 	}
 
-	client, err := m.client(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
-	}
-
-	model, _, err := client.GradientAI.GetModelByUUID(ctx, modelUUID)
+	metadata, err := m.getModelMetadata(ctx, modelUUID)
 	if err != nil {
 		return mcp.NewToolResultErrorFromErr("Failed to get model", err), nil
-	}
-
-	if model == nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Model with UUID '%s' not found", modelUUID)), nil
-	}
-
-	type ModelMetadata struct {
-		UUID              string                `json:"uuid"`
-		Name              string                `json:"name"`
-		Description       string                `json:"description,omitempty"`
-		Provider          string                `json:"provider,omitempty"`
-		Agreement         *godo.Agreement       `json:"agreement,omitempty"`
-		ModelAvailability string                `json:"model_availability,omitempty"`
-		ContextWindow     string                `json:"context_window,omitempty"`
-		Capabilities      []string              `json:"capabilities,omitempty"`
-		Modalities        *godo.ModelModalities `json:"modalities,omitempty"`
-		ParameterCount    float64               `json:"parameter_count,omitempty"`
-		Type              string                `json:"type,omitempty"`
-	}
-
-	metadata := ModelMetadata{
-		UUID:              model.Uuid,
-		Name:              model.Name,
-		Description:       model.Description,
-		Provider:          model.Provider,
-		Agreement:         model.Agreement,
-		ModelAvailability: model.ModelAvailability,
-		ContextWindow:     model.ContextWindow,
-		Capabilities:      model.Capabilities,
-		Modalities:        model.Modalities,
-		ParameterCount:    model.ParameterCount,
-		Type:              model.Type,
 	}
 
 	jsonData, err := json.MarshalIndent(metadata, "", "  ")

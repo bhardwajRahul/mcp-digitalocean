@@ -3,6 +3,7 @@
 package testing
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -105,6 +106,8 @@ func TestModelCatalogGetCard(t *testing.T) {
 		Modalities        *godo.ModelModalities `json:"modalities,omitempty"`
 		ParameterCount    float64               `json:"parameter_count,omitempty"`
 		Type              string                `json:"type,omitempty"`
+		Pricing           *godo.ModelPricing    `json:"pricing,omitempty"`
+		BenchmarkScore    json.RawMessage       `json:"benchmark_score,omitempty"`
 	}](t, "genai-model-catalog-get-card", map[string]interface{}{
 		"ModelUUID": testUUID,
 	})
@@ -137,6 +140,12 @@ func TestModelCatalogGetCard(t *testing.T) {
 	}
 	if model.Modalities != nil {
 		t.Logf("modalities - input: %v, output: %v", model.Modalities.Input, model.Modalities.Output)
+	}
+	if model.Pricing != nil {
+		t.Logf("pricing - input: $%.2f/M, output: $%.2f/M", model.Pricing.InputPricePerMillion, model.Pricing.OutputPricePerMillion)
+	}
+	if len(model.BenchmarkScore) > 0 && string(model.BenchmarkScore) != "null" {
+		t.Logf("benchmark score: %s", string(model.BenchmarkScore))
 	}
 
 	// Verify model metadata structure
@@ -217,6 +226,8 @@ func TestModelCatalogWorkflow(t *testing.T) {
 			Modalities        *godo.ModelModalities `json:"modalities,omitempty"`
 			ParameterCount    float64               `json:"parameter_count,omitempty"`
 			Type              string                `json:"type,omitempty"`
+			Pricing           *godo.ModelPricing    `json:"pricing,omitempty"`
+			BenchmarkScore    json.RawMessage       `json:"benchmark_score,omitempty"`
 		}](t, "genai-model-catalog-get-card", map[string]interface{}{
 			"ModelUUID": uuid,
 		})
@@ -238,3 +249,155 @@ func TestModelCatalogWorkflow(t *testing.T) {
 
 	t.Log("workflow completed successfully")
 }
+
+// TestModelComparisonPrompt tests the model comparison prompt
+func TestModelComparisonPrompt(t *testing.T) {
+	ctx, c := getTestClient(t)
+
+	// First, get two model UUIDs to compare
+	t.Log("searching for models to compare...")
+	searchResult := callTool[struct {
+		ModelUUIDs  []string `json:"model_uuids"`
+		SearchQuery string   `json:"search_query"`
+		Count       int      `json:"count"`
+	}](t, "genai-model-catalog-search", map[string]interface{}{
+		"SearchQuery": "gpt",
+	})
+
+	if len(searchResult.ModelUUIDs) < 2 {
+		t.Skip("need at least 2 models to test comparison, skipping")
+	}
+
+	uuid1 := searchResult.ModelUUIDs[0]
+	uuid2 := searchResult.ModelUUIDs[1]
+	t.Logf("comparing models: %s vs %s", uuid1, uuid2)
+
+	resp, err := c.GetPrompt(ctx, mcp.GetPromptRequest{
+		Params: mcp.GetPromptParams{
+			Name: "model-comparison",
+			Arguments: map[string]interface{}{
+				"ModelUUID1": uuid1,
+				"ModelUUID2": uuid2,
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Description, "comparison should have a description")
+	require.NotEmpty(t, resp.Messages, "comparison should have messages")
+	require.Greater(t, len(resp.Messages), 0, "should have at least one message")
+
+	if len(resp.Messages) > 0 {
+		msg := resp.Messages[0]
+		require.Equal(t, "user", string(msg.Role), "message role should be 'user'")
+
+		if textContent, ok := msg.Content.(mcp.TextContent); ok {
+			require.NotEmpty(t, textContent.Text, "message should have text content")
+			require.Contains(t, textContent.Text, "Model Comparison", "should contain comparison header")
+			require.Contains(t, textContent.Text, "Input Price", "should contain input price")
+			require.Contains(t, textContent.Text, "Output Price", "should contain output price")
+			require.Contains(t, textContent.Text, "Capabilities", "should contain capabilities section")
+			t.Logf("comparison generated successfully with %d characters", len(textContent.Text))
+		} else {
+			t.Fatalf("expected TextContent, got %T", msg.Content)
+		}
+	}
+}
+
+// TestSearchByTaskPrompt tests the search by task prompt
+func TestSearchByTaskPrompt(t *testing.T) {
+	ctx, c := getTestClient(t)
+
+	t.Log("searching for models by task: 'chat'")
+
+	resp, err := c.GetPrompt(ctx, mcp.GetPromptRequest{
+		Params: mcp.GetPromptParams{
+			Name: "search-by-task",
+			Arguments: map[string]interface{}{
+				"Task": "chat",
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Description, "search should have a description")
+	require.Contains(t, resp.Description, "chat", "description should mention the task")
+	require.NotEmpty(t, resp.Messages, "search should have messages")
+	require.Greater(t, len(resp.Messages), 0, "should have at least one message")
+
+	if len(resp.Messages) > 0 {
+		msg := resp.Messages[0]
+		require.Equal(t, "user", string(msg.Role), "message role should be 'user'")
+
+		if textContent, ok := msg.Content.(mcp.TextContent); ok {
+			require.NotEmpty(t, textContent.Text, "message should have text content")
+			require.Contains(t, textContent.Text, "Model Search Results", "should contain search header")
+			require.Contains(t, textContent.Text, "chat", "should mention the task")
+			require.Contains(t, textContent.Text, "Input Price", "should show pricing information")
+			t.Logf("search results generated successfully with %d characters", len(textContent.Text))
+		} else {
+			t.Fatalf("expected TextContent, got %T", msg.Content)
+		}
+	}
+}
+
+// TestSearchByTaskPromptWithConstraints tests search with filtering constraints
+func TestSearchByTaskPromptWithConstraints(t *testing.T) {
+	ctx, c := getTestClient(t)
+
+	t.Log("searching for models by task with constraints")
+
+	resp, err := c.GetPrompt(ctx, mcp.GetPromptRequest{
+		Params: mcp.GetPromptParams{
+			Name: "search-by-task",
+			Arguments: map[string]interface{}{
+				"Task":           "reasoning",
+				"DeploymentType": "Serverless",
+				"Provider":       "Anthropic",
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Description, "search should have a description")
+	require.NotEmpty(t, resp.Messages, "search should have messages")
+
+	if len(resp.Messages) > 0 {
+		msg := resp.Messages[0]
+		require.Equal(t, "user", string(msg.Role), "message role should be 'user'")
+
+		if textContent, ok := msg.Content.(mcp.TextContent); ok {
+			require.NotEmpty(t, textContent.Text, "message should have text content")
+			require.Contains(t, textContent.Text, "Applied Constraints", "should show constraints section")
+			require.Contains(t, textContent.Text, "Serverless", "should mention deployment type constraint")
+			require.Contains(t, textContent.Text, "Anthropic", "should mention provider constraint")
+			t.Logf("constrained search results generated successfully")
+		} else {
+			t.Fatalf("expected TextContent, got %T", msg.Content)
+		}
+	}
+}
+
+// TestModelComparisonPromptInvalidUUID tests error handling for comparison with invalid UUID
+func TestModelComparisonPromptInvalidUUID(t *testing.T) {
+	ctx, c := getTestClient(t)
+
+	t.Log("testing comparison with invalid UUID")
+
+	_, err := c.GetPrompt(ctx, mcp.GetPromptRequest{
+		Params: mcp.GetPromptParams{
+			Name: "model-comparison",
+			Arguments: map[string]interface{}{
+				"ModelUUID1": "99999999-9999-9999-9999-999999999999",
+				"ModelUUID2": "88888888-8888-8888-8888-888888888888",
+			},
+		},
+	})
+
+	require.Error(t, err, "should return error for invalid UUIDs")
+	t.Logf("correctly returned error: %v", err)
+}
+
