@@ -237,7 +237,19 @@ func matchesConstraints(model *ModelMetadata, constraints taskConstraints) bool 
 	}
 
 	// Check price constraints
-	if model.Pricing != nil {
+	// If user specifies price constraints, only match models with actual (non-zero) pricing
+	if constraints.maxInputPrice != nil || constraints.maxOutputPrice != nil {
+		// Require pricing data to exist
+		if model.Pricing == nil {
+			return false
+		}
+
+		// Require non-zero pricing (exclude placeholder $0.00 models)
+		if model.Pricing.InputPricePerMillion == 0 && model.Pricing.OutputPricePerMillion == 0 {
+			return false
+		}
+
+		// Check input price constraint
 		if constraints.maxInputPrice != nil {
 			if maxPrice, err := strconv.ParseFloat(*constraints.maxInputPrice, 64); err == nil {
 				if model.Pricing.InputPricePerMillion > maxPrice {
@@ -246,6 +258,7 @@ func matchesConstraints(model *ModelMetadata, constraints taskConstraints) bool 
 			}
 		}
 
+		// Check output price constraint
 		if constraints.maxOutputPrice != nil {
 			if maxPrice, err := strconv.ParseFloat(*constraints.maxOutputPrice, 64); err == nil {
 				if model.Pricing.OutputPricePerMillion > maxPrice {

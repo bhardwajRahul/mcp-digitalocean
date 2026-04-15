@@ -195,6 +195,73 @@ func TestMatchesConstraints(t *testing.T) {
 			},
 			expected: false,
 		},
+		{
+			name: "price constraint with nil pricing - excluded",
+			model: &ModelMetadata{
+				Provider: "OpenAI",
+				Pricing:  nil,
+			},
+			constraints: taskConstraints{
+				maxInputPrice: stringPtr("5.0"),
+			},
+			expected: false,
+		},
+		{
+			name: "price constraint with zero pricing - excluded",
+			model: &ModelMetadata{
+				Provider: "OpenAI",
+				Pricing: &godo.ModelPricing{
+					InputPricePerMillion:  0.0,
+					OutputPricePerMillion: 0.0,
+				},
+			},
+			constraints: taskConstraints{
+				maxInputPrice: stringPtr("5.0"),
+			},
+			expected: false,
+		},
+		{
+			name: "price constraint with partial zero pricing (input non-zero) - included",
+			model: &ModelMetadata{
+				Provider: "OpenAI",
+				Pricing: &godo.ModelPricing{
+					InputPricePerMillion:  3.0,
+					OutputPricePerMillion: 0.0,
+				},
+			},
+			constraints: taskConstraints{
+				maxInputPrice: stringPtr("5.0"),
+			},
+			expected: true,
+		},
+		{
+			name: "price constraint with partial zero pricing (output non-zero) - included",
+			model: &ModelMetadata{
+				Provider: "OpenAI",
+				Pricing: &godo.ModelPricing{
+					InputPricePerMillion:  0.0,
+					OutputPricePerMillion: 10.0,
+				},
+			},
+			constraints: taskConstraints{
+				maxOutputPrice: stringPtr("15.0"),
+			},
+			expected: true,
+		},
+		{
+			name: "no price constraint with zero pricing - included",
+			model: &ModelMetadata{
+				Provider: "OpenAI",
+				Pricing: &godo.ModelPricing{
+					InputPricePerMillion:  0.0,
+					OutputPricePerMillion: 0.0,
+				},
+			},
+			constraints: taskConstraints{
+				provider: stringPtr("openai"),
+			},
+			expected: true,
+		},
 	}
 
 	for _, tc := range tests {
@@ -778,9 +845,9 @@ func TestMatchesConstraints_PricingNilButConstraintExists(t *testing.T) {
 		maxInputPrice: stringPtr("5.0"),
 	}
 
-	// Should not filter out - if pricing is nil, constraint doesn't apply
+	// Should filter out - if user specifies price constraint, require actual pricing
 	result := matchesConstraints(model, constraints)
-	require.True(t, result, "models without pricing should pass when price constraint exists")
+	require.False(t, result, "models without pricing should be excluded when price constraint exists")
 }
 
 func TestMatchesConstraints_InvalidPriceStrings(t *testing.T) {
