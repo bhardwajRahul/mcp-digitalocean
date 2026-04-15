@@ -164,7 +164,7 @@ func TestModelCatalogGetCardNotFound(t *testing.T) {
 	resp, err := c.CallTool(ctx, mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
 			Name: "inference-model-catalog-get-card",
-			Arguments: map[string]interface{}{
+			Arguments: map[string]string{
 				"ModelUUID": fakeUUID,
 			},
 		},
@@ -275,7 +275,7 @@ func TestModelComparisonPrompt(t *testing.T) {
 	resp, err := c.GetPrompt(ctx, mcp.GetPromptRequest{
 		Params: mcp.GetPromptParams{
 			Name: "model-comparison",
-			Arguments: map[string]interface{}{
+			Arguments: map[string]string{
 				"ModelUUID1": uuid1,
 				"ModelUUID2": uuid2,
 			},
@@ -309,13 +309,14 @@ func TestModelComparisonPrompt(t *testing.T) {
 func TestSearchByTaskPrompt(t *testing.T) {
 	ctx, c := getTestClient(t)
 
-	t.Log("searching for models by task: 'chat'")
+	t.Log("searching for models by task with provider constraint to limit results")
 
 	resp, err := c.GetPrompt(ctx, mcp.GetPromptRequest{
 		Params: mcp.GetPromptParams{
 			Name: "search-by-task",
-			Arguments: map[string]interface{}{
-				"Task": "chat",
+			Arguments: map[string]string{
+				"Task":     "chat",
+				"Provider": "anthropic", // Add provider to limit results
 			},
 		},
 	})
@@ -352,7 +353,7 @@ func TestSearchByTaskPromptWithConstraints(t *testing.T) {
 	resp, err := c.GetPrompt(ctx, mcp.GetPromptRequest{
 		Params: mcp.GetPromptParams{
 			Name: "search-by-task",
-			Arguments: map[string]interface{}{
+			Arguments: map[string]string{
 				"Task":           "reasoning",
 				"DeploymentType": "Serverless",
 				"Provider":       "Anthropic",
@@ -390,7 +391,7 @@ func TestModelComparisonPromptInvalidUUID(t *testing.T) {
 	_, err := c.GetPrompt(ctx, mcp.GetPromptRequest{
 		Params: mcp.GetPromptParams{
 			Name: "model-comparison",
-			Arguments: map[string]interface{}{
+			Arguments: map[string]string{
 				"ModelUUID1": "99999999-9999-9999-9999-999999999999",
 				"ModelUUID2": "88888888-8888-8888-8888-888888888888",
 			},
@@ -410,10 +411,10 @@ func TestSearchByTaskPromptNoModelsFound(t *testing.T) {
 	resp, err := c.GetPrompt(ctx, mcp.GetPromptRequest{
 		Params: mcp.GetPromptParams{
 			Name: "search-by-task",
-			Arguments: map[string]interface{}{
-				"Task":           "chat",
-				"MaxInputPrice":  "0.01",
-				"MaxOutputPrice": "0.01",
+			Arguments: map[string]string{
+				"Task":             "chat",
+				"Provider":         "NonExistentProvider",
+				"MinContextWindow": "999999999",
 			},
 		},
 	})
@@ -429,7 +430,7 @@ func TestSearchByTaskPromptNoModelsFound(t *testing.T) {
 		if textContent, ok := msg.Content.(mcp.TextContent); ok {
 			require.NotEmpty(t, textContent.Text, "message should have text content")
 			require.Contains(t, textContent.Text, "Applied Constraints", "should show constraints section")
-			require.Contains(t, textContent.Text, "$0.01", "should show price constraints")
+			require.Contains(t, textContent.Text, "NonExistentProvider", "should show provider constraint")
 			require.Contains(t, textContent.Text, "No Models Found", "should state no models found")
 			require.NotContains(t, textContent.Text, "Recommendation", "should not have recommendation section")
 			t.Logf("correctly returned empty result with honest message")

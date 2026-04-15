@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	modalityInput  = "input"
-	modalityOutput = "output"
+	modalityInput      = "input"
+	modalityOutput     = "output"
+	maxModelsToProcess = 20 // Limit to prevent timeouts on broad searches
 )
 
 // handleModelComparison compares two models side-by-side
@@ -128,13 +129,11 @@ func (m *ModelTool) handleSearchByTask(ctx context.Context, req mcp.GetPromptReq
 	var constraints taskConstraints
 
 	if provider, ok := args["Provider"]; ok && provider != "" {
-		p := strings.ToLower(provider)
-		constraints.provider = &p
+		constraints.provider = &provider
 	}
 
 	if deploymentType, ok := args["DeploymentType"]; ok && deploymentType != "" {
-		dt := strings.ToLower(deploymentType)
-		constraints.deploymentType = &dt
+		constraints.deploymentType = &deploymentType
 	}
 
 	if minCtxWindow, ok := args["MinContextWindow"]; ok && minCtxWindow != "" {
@@ -160,7 +159,13 @@ func (m *ModelTool) handleSearchByTask(ctx context.Context, req mcp.GetPromptReq
 	}
 
 	var matchingModels []*ModelMetadata
+	processedCount := 0
 	for _, uuid := range uuids {
+		if processedCount >= maxModelsToProcess {
+			break
+		}
+		processedCount++
+
 		model, err := m.getModelMetadata(ctx, uuid)
 		if err != nil {
 			continue
@@ -177,6 +182,11 @@ func (m *ModelTool) handleSearchByTask(ctx context.Context, req mcp.GetPromptReq
 		}
 
 		matchingModels = append(matchingModels, model)
+
+		// Stop early if we have enough good matches
+		if len(matchingModels) >= 10 {
+			break
+		}
 	}
 
 	recommendationText := formatSearchResults(task, matchingModels, constraints)
@@ -206,12 +216,12 @@ type taskConstraints struct {
 
 // matchesConstraints checks if a model matches the specified constraints
 func matchesConstraints(model *ModelMetadata, constraints taskConstraints) bool {
-	if constraints.provider != nil && !strings.Contains(strings.ToLower(model.Provider), *constraints.provider) {
+	if constraints.provider != nil && !strings.Contains(strings.ToLower(model.Provider), strings.ToLower(*constraints.provider)) {
 		return false
 	}
 
 	if constraints.deploymentType != nil && *constraints.deploymentType != "" {
-		if !strings.Contains(strings.ToLower(model.ModelAvailability), *constraints.deploymentType) {
+		if !strings.Contains(strings.ToLower(model.ModelAvailability), strings.ToLower(*constraints.deploymentType)) {
 			return false
 		}
 	}
