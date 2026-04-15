@@ -400,3 +400,41 @@ func TestModelComparisonPromptInvalidUUID(t *testing.T) {
 	require.Error(t, err, "should return error for invalid UUIDs")
 	t.Logf("correctly returned error: %v", err)
 }
+
+// TestSearchByTaskPromptNoModelsFound tests search with impossible constraints (UAT 3.4.9)
+func TestSearchByTaskPromptNoModelsFound(t *testing.T) {
+	ctx, c := getTestClient(t)
+
+	t.Log("testing search by task with impossible constraints")
+
+	resp, err := c.GetPrompt(ctx, mcp.GetPromptRequest{
+		Params: mcp.GetPromptParams{
+			Name: "search-by-task",
+			Arguments: map[string]interface{}{
+				"Task":           "chat",
+				"MaxInputPrice":  "0.01",
+				"MaxOutputPrice": "0.01",
+			},
+		},
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Messages, "search should have messages")
+
+	if len(resp.Messages) > 0 {
+		msg := resp.Messages[0]
+		require.Equal(t, "user", string(msg.Role), "message role should be 'user'")
+
+		if textContent, ok := msg.Content.(mcp.TextContent); ok {
+			require.NotEmpty(t, textContent.Text, "message should have text content")
+			require.Contains(t, textContent.Text, "Applied Constraints", "should show constraints section")
+			require.Contains(t, textContent.Text, "$0.01", "should show price constraints")
+			require.Contains(t, textContent.Text, "No Models Found", "should state no models found")
+			require.NotContains(t, textContent.Text, "Recommendation", "should not have recommendation section")
+			t.Logf("correctly returned empty result with honest message")
+		} else {
+			t.Fatalf("expected TextContent, got %T", msg.Content)
+		}
+	}
+}

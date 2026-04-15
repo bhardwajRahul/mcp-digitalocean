@@ -226,6 +226,25 @@ func matchesConstraints(model *ModelMetadata, constraints taskConstraints) bool 
 		}
 	}
 
+	// Check price constraints
+	if model.Pricing != nil {
+		if constraints.maxInputPrice != nil {
+			if maxPrice, err := strconv.ParseFloat(*constraints.maxInputPrice, 64); err == nil {
+				if model.Pricing.InputPricePerMillion > maxPrice {
+					return false
+				}
+			}
+		}
+
+		if constraints.maxOutputPrice != nil {
+			if maxPrice, err := strconv.ParseFloat(*constraints.maxOutputPrice, 64); err == nil {
+				if model.Pricing.OutputPricePerMillion > maxPrice {
+					return false
+				}
+			}
+		}
+	}
+
 	return true
 }
 
