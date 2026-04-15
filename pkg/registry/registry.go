@@ -15,8 +15,8 @@ import (
 	"mcp-digitalocean/pkg/registry/doks"
 	"mcp-digitalocean/pkg/registry/droplet"
 	"mcp-digitalocean/pkg/registry/functions"
-	genaimodelcatalog "mcp-digitalocean/pkg/registry/genai-modelcatalog"
 	gradientai "mcp-digitalocean/pkg/registry/gradient-ai"
+	inferencemodelcatalog "mcp-digitalocean/pkg/registry/inference-modelcatalog"
 	"mcp-digitalocean/pkg/registry/insights"
 	"mcp-digitalocean/pkg/registry/marketplace"
 	"mcp-digitalocean/pkg/registry/networking"
@@ -31,21 +31,21 @@ type getClientFn func(ctx context.Context) (*godo.Client, error)
 
 // supportedServices is a set of services that we support in this MCP server.
 var supportedServices = map[string]struct{}{
-	"apps":               {},
-	"networking":         {},
-	"droplets":           {},
-	"accounts":           {},
-	"spaces":             {},
-	"databases":          {},
-	"marketplace":        {},
-	"gradient-ai":        {},
-	"genai-modelcatalog": {},
-	"insights":           {},
-	"doks":               {},
-	"docr":               {},
-	"docs":               {},
-	"volumes":            {},
-	"functions":          {},
+	"apps":                   {},
+	"networking":             {},
+	"droplets":               {},
+	"accounts":               {},
+	"spaces":                 {},
+	"databases":              {},
+	"marketplace":            {},
+	"gradient-ai":            {},
+	"inference-modelcatalog": {},
+	"insights":               {},
+	"doks":                   {},
+	"docr":                   {},
+	"docs":                   {},
+	"volumes":                {},
+	"functions":              {},
 }
 
 // registerAppTools registers the app platform tools with the MCP server.
@@ -128,7 +128,9 @@ func registerGradientAITools(s *server.MCPServer, getClient getClientFn) error {
 
 // registerModelCatalogTools registers the model catalog tools with the MCP server.
 func registerModelCatalogTools(s *server.MCPServer, getClient getClientFn) error {
-	s.AddTools(genaimodelcatalog.NewModelTool(getClient).Tools()...)
+	modelTool := inferencemodelcatalog.NewModelTool(getClient)
+	s.AddTools(modelTool.Tools()...)
+	s.AddPrompts(modelTool.Prompts()...)
 	return nil
 }
 
@@ -236,9 +238,9 @@ func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, s
 			if err := registerGradientAITools(s, getClient); err != nil {
 				return fmt.Errorf("failed to register gradient-ai tools: %w", err)
 			}
-		case "genai-modelcatalog":
+		case "inference-modelcatalog":
 			if err := registerModelCatalogTools(s, getClient); err != nil {
-				return fmt.Errorf("failed to register genai-modelcatalog tools: %w", err)
+				return fmt.Errorf("failed to register inference-modelcatalog tools: %w", err)
 			}
 		case "insights":
 			if err := registerInsightsTools(s, getClient); err != nil {
