@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"sync"
 	"time"
@@ -20,6 +21,9 @@ import (
 // genAIAPIPath is the relative path prefix for GenAI endpoints (same style as godo's "v2/droplets").
 // With the default API base (https://api.digitalocean.com/), this resolves to .../v2/gen-ai/...
 const genAIAPIPath = "v2/gen-ai"
+
+// presignedUploadHTTPClient performs PUTs to third-party presigned URLs (not the godo client).
+var presignedUploadHTTPClient = &http.Client{Timeout: 15 * time.Minute}
 
 // EvaluationService provides helpers for evaluation operations
 type EvaluationService struct {
@@ -221,12 +225,15 @@ func (et *EvaluationTool) listEvaluationTestCases(ctx context.Context, req mcp.C
 		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
 	}
 
-	// Build query string
 	path := genAIAPIPath + "/evaluation_test_cases"
+	q := url.Values{}
 	if workspaceUUID != "" {
-		path += "?workspace_uuid=" + workspaceUUID
+		q.Set("workspace_uuid", workspaceUUID)
 	} else if workspaceName != "" {
-		path += "?agent_workspace_name=" + workspaceName
+		q.Set("agent_workspace_name", workspaceName)
+	}
+	if enc := q.Encode(); enc != "" {
+		path += "?" + enc
 	}
 
 	apiReq, err := client.NewRequest(ctx, "GET", path, nil)
@@ -319,14 +326,14 @@ func (et *EvaluationTool) createEvaluationDataset(ctx context.Context, req mcp.C
 	upload := presignedOutput.Uploads[0]
 
 	// Upload file to presigned URL
-	uploadReq, err := http.NewRequest("PUT", upload.PresignedURL, bytes.NewReader(fileData))
+	uploadReq, err := http.NewRequestWithContext(ctx, "PUT", upload.PresignedURL, bytes.NewReader(fileData))
 	if err != nil {
 		return mcp.NewToolResultErrorFromErr("failed to create upload request", err), nil
 	}
 	uploadReq.ContentLength = fileSize
 	uploadReq.Header.Set("Content-Type", "text/csv")
 
-	httpResp, err := http.DefaultClient.Do(uploadReq)
+	httpResp, err := presignedUploadHTTPClient.Do(uploadReq)
 	if err != nil {
 		return mcp.NewToolResultErrorFromErr("failed to upload file", err), nil
 	}
@@ -419,13 +426,16 @@ func (et *EvaluationTool) createEvaluationTestCase(ctx context.Context, req mcp.
 	}
 
 	input := &CreateEvaluationTestCaseInput{
-		Name:               name,
-		Description:        description,
-		DatasetUUID:        datasetUUID,
-		Metrics:            metrics,
-		StarMetric:         starMetric,
-		WorkspaceUUID:      &workspaceUUID,
-		AgentWorkspaceName: &workspaceName,
+		Name:        name,
+		Description: description,
+		DatasetUUID: datasetUUID,
+		Metrics:     metrics,
+		StarMetric:  starMetric,
+	}
+	if workspaceUUID != "" {
+		input.WorkspaceUUID = &workspaceUUID
+	} else {
+		input.AgentWorkspaceName = &workspaceName
 	}
 
 	apiReq, err := client.NewRequest(ctx, "POST", genAIAPIPath+"/evaluation_test_cases", input)
@@ -464,9 +474,6 @@ func (et *EvaluationTool) updateEvaluationTestCase(ctx context.Context, req mcp.
 	args := req.GetArguments()
 
 	testCaseUUID, _ := args["test_case_uuid"].(string)
-	name, _ := args["name"].(string)
-	description, _ := args["description"].(string)
-	datasetUUID, _ := args["dataset_uuid"].(string)
 
 	// Convert metrics to strings
 	metricsRaw, _ := args["metrics"].([]interface{})
@@ -493,11 +500,17 @@ func (et *EvaluationTool) updateEvaluationTestCase(ctx context.Context, req mcp.
 
 	input := &UpdateEvaluationTestCaseInput{
 		TestCaseUUID: testCaseUUID,
-		Name:         &name,
-		Description:  &description,
-		DatasetUUID:  &datasetUUID,
 		Metrics:      metrics,
 		StarMetric:   starMetric,
+	}
+	if v, ok := args["name"].(string); ok && v != "" {
+		input.Name = &v
+	}
+	if v, ok := args["description"].(string); ok && v != "" {
+		input.Description = &v
+	}
+	if v, ok := args["dataset_uuid"].(string); ok && v != "" {
+		input.DatasetUUID = &v
 	}
 
 	path := genAIAPIPath + "/evaluation_test_cases/" + testCaseUUID
@@ -741,14 +754,14 @@ func (et *EvaluationTool) runEvaluationWorkflow(ctx context.Context, req mcp.Cal
 
 	upload := presignedOutput.Uploads[0]
 
-	uploadReq2, err := http.NewRequest("PUT", upload.PresignedURL, bytes.NewReader(fileData))
+	uploadReq2, err := http.NewRequestWithContext(ctx, "PUT", upload.PresignedURL, bytes.NewReader(fileData))
 	if err != nil {
 		return mcp.NewToolResultErrorFromErr("step 4: failed to create upload request", err), nil
 	}
 	uploadReq2.ContentLength = fileSize
 	uploadReq2.Header.Set("Content-Type", "text/csv")
 
-	httpResp, err := http.DefaultClient.Do(uploadReq2)
+	httpResp, err := presignedUploadHTTPClient.Do(uploadReq2)
 	if err != nil {
 		return mcp.NewToolResultErrorFromErr("step 4: failed to upload file", err), nil
 	}
@@ -782,7 +795,9 @@ func (et *EvaluationTool) runEvaluationWorkflow(ctx context.Context, req mcp.Cal
 	datasetUUID := datasetOutput.EvaluationDatasetUUID
 
 	// Step 5: Find or create test case
-	testCasesReq, err := client.NewRequest(ctx, "GET", genAIAPIPath+"/evaluation_test_cases?agent_workspace_name="+workspaceName, nil)
+	testCasesQ := url.Values{}
+	testCasesQ.Set("agent_workspace_name", workspaceName)
+	testCasesReq, err := client.NewRequest(ctx, "GET", genAIAPIPath+"/evaluation_test_cases?"+testCasesQ.Encode(), nil)
 	if err != nil {
 		return mcp.NewToolResultErrorFromErr("step 5: failed to create request", err), nil
 	}
@@ -890,6 +905,9 @@ func (et *EvaluationTool) runEvaluationWorkflow(ctx context.Context, req mcp.Cal
 		}
 
 		finalRun = output.EvaluationRun
+		if finalRun == nil {
+			return mcp.NewToolResultError("step 7: evaluation run missing from API response"), nil
+		}
 
 		// Check for terminal status
 		if isTerminalStatus(finalRun.Status) {
