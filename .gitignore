@@ -23,6 +23,9 @@ go.work
 
 bin/
 
+# Local build of the MCP server (same name as repo dir when built at root)
+/mcp-digitalocean
+
 # node_modules
 scripts/npm/node_modules/
 
