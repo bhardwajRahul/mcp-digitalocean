@@ -405,6 +405,14 @@ func (et *EvaluationTool) createEvaluationTestCase(ctx context.Context, req mcp.
 		return mcp.NewToolResultError("Either workspace_uuid or agent_workspace_name is required"), nil
 	}
 
+	starMetric := parseStarMetricArg(args)
+	if starMetric == nil {
+		starMetric = defaultStarMetric(metrics)
+	}
+	if starMetric == nil {
+		return mcp.NewToolResultError("At least one metric UUID is required in 'metrics' (used as the star metric), or provide 'star_metric' with metric_uuid"), nil
+	}
+
 	client, err := et.client(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
@@ -415,6 +423,7 @@ func (et *EvaluationTool) createEvaluationTestCase(ctx context.Context, req mcp.
 		Description:        description,
 		DatasetUUID:        datasetUUID,
 		Metrics:            metrics,
+		StarMetric:         starMetric,
 		WorkspaceUUID:      &workspaceUUID,
 		AgentWorkspaceName: &workspaceName,
 	}
@@ -472,6 +481,11 @@ func (et *EvaluationTool) updateEvaluationTestCase(ctx context.Context, req mcp.
 		return mcp.NewToolResultError("test_case_uuid is required"), nil
 	}
 
+	starMetric := parseStarMetricArg(args)
+	if starMetric == nil {
+		starMetric = defaultStarMetric(metrics)
+	}
+
 	client, err := et.client(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get DigitalOcean client: %w", err)
@@ -483,6 +497,7 @@ func (et *EvaluationTool) updateEvaluationTestCase(ctx context.Context, req mcp.
 		Description:  &description,
 		DatasetUUID:  &datasetUUID,
 		Metrics:      metrics,
+		StarMetric:   starMetric,
 	}
 
 	path := genAIAPIPath + "/evaluation_test_cases/" + testCaseUUID
@@ -787,6 +802,7 @@ func (et *EvaluationTool) runEvaluationWorkflow(ctx context.Context, req mcp.Cal
 				TestCaseUUID: testCaseUUID,
 				DatasetUUID:  &datasetUUID,
 				Metrics:      metricUUIDs,
+				StarMetric:   defaultStarMetric(metricUUIDs),
 			}
 
 			updateReq, err := client.NewRequest(ctx, "PUT", genAIAPIPath+"/evaluation_test_cases/"+testCaseUUID, updateInput)
@@ -809,6 +825,7 @@ func (et *EvaluationTool) runEvaluationWorkflow(ctx context.Context, req mcp.Cal
 			Description:        description,
 			DatasetUUID:        datasetUUID,
 			Metrics:            metricUUIDs,
+			StarMetric:         defaultStarMetric(metricUUIDs),
 			AgentWorkspaceName: &workspaceName,
 		}
 
@@ -963,6 +980,7 @@ func (et *EvaluationTool) Tools() []server.ServerTool {
 				mcp.WithString("description", mcp.Description("Description of the test case")),
 				mcp.WithString("dataset_uuid", mcp.Required(), mcp.Description("Dataset UUID")),
 				mcp.WithObject("metrics", mcp.Description("List of metric UUIDs")),
+				mcp.WithObject("star_metric", mcp.Description("Optional primary metric: metric_uuid, optional success_threshold_pct (defaults to first metric at 80% if omitted)")),
 				mcp.WithString("workspace_uuid", mcp.Description("Workspace UUID (optional if agent_workspace_name is provided)")),
 				mcp.WithString("agent_workspace_name", mcp.Description("Workspace name (optional if workspace_uuid is provided)")),
 			),
@@ -977,6 +995,7 @@ func (et *EvaluationTool) Tools() []server.ServerTool {
 				mcp.WithString("description", mcp.Description("New description for the test case")),
 				mcp.WithString("dataset_uuid", mcp.Description("New dataset UUID")),
 				mcp.WithObject("metrics", mcp.Description("List of metric UUIDs")),
+				mcp.WithObject("star_metric", mcp.Description("Optional primary metric object; defaults from metrics when omitted")),
 			),
 		},
 		{
@@ -1017,6 +1036,41 @@ func (et *EvaluationTool) Tools() []server.ServerTool {
 }
 
 // Helper functions
+
+func defaultStarMetric(metricUUIDs []string) *StarMetric {
+	if len(metricUUIDs) == 0 {
+		return nil
+	}
+	pct := 80.0
+	return &StarMetric{
+		MetricUUID:          metricUUIDs[0],
+		SuccessThresholdPct: &pct,
+	}
+}
+
+func parseStarMetricArg(args map[string]interface{}) *StarMetric {
+	raw, ok := args["star_metric"].(map[string]interface{})
+	if !ok || raw == nil {
+		return nil
+	}
+	sm := &StarMetric{}
+	if u, ok := raw["metric_uuid"].(string); ok {
+		sm.MetricUUID = u
+	}
+	if n, ok := raw["name"].(string); ok && n != "" {
+		sm.Name = &n
+	}
+	if v, ok := raw["success_threshold"].(float64); ok {
+		sm.SuccessThreshold = &v
+	}
+	if v, ok := raw["success_threshold_pct"].(float64); ok {
+		sm.SuccessThresholdPct = &v
+	}
+	if sm.MetricUUID == "" {
+		return nil
+	}
+	return sm
+}
 
 func isCSVFile(path string) bool {
 	return len(path) > 4 && path[len(path)-4:] == ".csv"
