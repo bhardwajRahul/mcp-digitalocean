@@ -24,9 +24,12 @@ const (
 	dbaasClusterStatusOnline = "online"
 
 	// Configuration Defaults
-	defaultDropletSize   = "s-1vcpu-1gb"
-	defaultTestImageSlug = "ubuntu-22-04-x64"
-	defaultVolumeSize    = 1
+	defaultDropletSize             = "s-1vcpu-1gb"
+	defaultTestImageSlug           = "ubuntu-22-04-x64"
+	defaultVolumeSize              = 1
+	defaultNfsShareMinSizeGib      = 50
+	defaultNfsShareResizeSizeGib   = 100
+	defaultNfsSharePerformanceTier = "standard"
 
 	// Polling Intervals
 	defaultPollInterval  = 2 * time.Second
@@ -302,6 +305,9 @@ func deleteResourceWithGodo(t *testing.T, ctx context.Context, gclient *godo.Cli
 		_, err = gclient.Images.Delete(ctx, idInt)
 	case "volume":
 		_, err = gclient.Storage.DeleteVolume(ctx, idString)
+	case "nfs-file-share":
+		// Nfs delete region is deprecated and ignored, passing empty string for godo client
+		_, err = gclient.Nfs.Delete(ctx, idString, "")
 	default:
 		t.Logf("[Delete] Failed %s %s: unsupported resource type", resourceType, formatID(id))
 		return
@@ -566,6 +572,24 @@ func WaitForImageCondition(t *testing.T, imageID int, condition func(*godo.Image
 	return testhelpers.WaitForImage(ctx, gclient, imageID, condition, interval, timeout)
 }
 
+func WaitForNfsShareCondition(t *testing.T, shareID string, condition func(*godo.Nfs) bool, interval, timeout time.Duration) (*godo.Nfs, error) {
+	t.Helper()
+
+	ctx := context.Background()
+	gclient, err := testhelpers.MustGodoClient(ctx, t.Name())
+	require.NoError(t, err)
+
+	return testhelpers.WaitForNfsShare(ctx, gclient, shareID, condition, interval, timeout)
+}
+
+func WaitForNfsShareActive(t *testing.T, shareID string, timeout time.Duration) godo.Nfs {
+	t.Helper()
+
+	n, err := WaitForNfsShareCondition(t, shareID, testhelpers.IsNfsShareActive, resourcePollInterval, timeout)
+	require.NoError(t, err, "WaitForNfsShareActive failed")
+	return *n
+}
+
 func WaitForDropletDeletion(t *testing.T, dropletID int, interval, timeout time.Duration) error {
 	t.Helper()
 
@@ -717,4 +741,27 @@ func CreateTestVolume(t *testing.T, namePrefix string) godo.Volume {
 	t.Logf("[Created] Volume %s: Name=%s, Region=%s Size=%d", volume.ID, volume.Name, volume.Region.Slug, volume.SizeGigaBytes)
 
 	return volume
+}
+
+// CreateTestNfsShare creates an NFS file share (minimum size) and registers API cleanup.
+func CreateTestNfsShare(t *testing.T, namePrefix string) godo.Nfs {
+	t.Helper()
+
+	shareName := fmt.Sprintf("%s-%d", namePrefix, time.Now().Unix())
+	region := "nyc2"
+
+	t.Logf("Creating NFS share: %s (Region: %s, Size: %d GiB)...", shareName, region, defaultNfsShareMinSizeGib)
+
+	share := callTool[godo.Nfs](t, "nfs-file-share-create", map[string]any{
+		"Name":            shareName,
+		"Region":          region,
+		"SizeGibibytes":   float64(defaultNfsShareMinSizeGib),
+		"PerformanceTier": defaultNfsSharePerformanceTier,
+	})
+
+	RegisterResourceCleanup(t, "nfs-file-share", share.ID)
+
+	t.Logf("[Created] nfs share %s: Name=%s, Region=%s Size=%d", share.ID, share.Name, share.Region, share.SizeGib)
+
+	return share
 }
