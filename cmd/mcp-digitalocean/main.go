@@ -23,7 +23,7 @@ import (
 
 const (
 	mcpName                 = "mcp-digitalocean"
-	mcpVersion              = "1.0.43"
+	mcpVersion              = "1.0.45"
 	wsLoggingContextTimeout = 15 * time.Second
 )
 
@@ -123,6 +123,7 @@ func main() {
 	}
 
 	var opts []server.ServerOption
+	opts = append(opts, server.WithPromptCapabilities(true))
 	if *enableToolErrorLogging {
 		toolLoggingMiddleware := middleware.ToolLoggingMiddleware{Logger: logger}
 		opts = append(opts, server.WithToolHandlerMiddleware(toolLoggingMiddleware.ToolMiddleware))

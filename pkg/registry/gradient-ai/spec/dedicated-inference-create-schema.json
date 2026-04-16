@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "description": "CreateDedicatedInferenceV2 / POST /v2/dedicated-inferences — request body matches DeploymentSpec + DeploymentSpecSecret",
+  "properties": {
+    "spec": {
+      "type": "object",
+      "description": "DeploymentSpec (writable fields)",
+      "properties": {
+        "version": {
+          "type": "integer",
+          "description": "Spec version; omit or use 1 if unsure"
+        },
+        "name": {
+          "type": "string",
+          "description": "Instance name"
+        },
+        "region": {
+          "type": "string",
+          "description": "Region slug (e.g. nyc2, tor1, atl1)"
+        },
+        "enable_public_endpoint": {
+          "type": "boolean",
+          "description": "Whether to expose a public endpoint"
+        },
+        "vpc": {
+          "type": "object",
+          "properties": {
+            "uuid": {
+              "type": "string",
+              "description": "VPC UUID"
+            }
+          }
+        },
+        "model_deployments": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Model deployments with accelerators",
+          "items": {
+            "type": "object",
+            "properties": {
+              "model_id": {
+                "type": "string"
+              },
+              "model_slug": {
+                "type": "string"
+              },
+              "model_provider": {
+                "type": "string"
+              },
+              "accelerators": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "accelerator_slug": {
+                      "type": "string"
+                    },
+                    "scale": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["accelerator_slug", "scale"]
+                }
+              }
+            },
+            "required": ["model_slug", "model_provider", "accelerators"]
+          }
+        }
+      },
+      "required": ["name", "region", "model_deployments"]
+    },
+    "secrets": {
+      "type": "object",
+      "description": "DeploymentSpecSecret — write-only; never returned in responses",
+      "properties": {
+        "hugging_face_token": {
+          "type": "string",
+          "description": "Hugging Face token for gated models"
+        }
+      }
+    }
+  },
+  "required": ["spec"]
+}
