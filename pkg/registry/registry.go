@@ -15,6 +15,7 @@ import (
 	"mcp-digitalocean/pkg/registry/doks"
 	"mcp-digitalocean/pkg/registry/droplet"
 	"mcp-digitalocean/pkg/registry/functions"
+	"mcp-digitalocean/pkg/registry/genai"
 	gradientai "mcp-digitalocean/pkg/registry/gradient-ai"
 	inferencemodelcatalog "mcp-digitalocean/pkg/registry/inference-modelcatalog"
 	"mcp-digitalocean/pkg/registry/insights"
@@ -40,6 +41,7 @@ var supportedServices = map[string]struct{}{
 	"marketplace":            {},
 	"gradient-ai":            {},
 	"inference-modelcatalog": {},
+	"genai-evaluation":       {},
 	"insights":               {},
 	"doks":                   {},
 	"docr":                   {},
@@ -131,6 +133,12 @@ func registerModelCatalogTools(s *server.MCPServer, getClient getClientFn) error
 	modelTool := inferencemodelcatalog.NewModelTool(getClient)
 	s.AddTools(modelTool.Tools()...)
 	s.AddPrompts(modelTool.Prompts()...)
+	return nil
+}
+
+// registerGenAIEvaluationTools registers the GenAI evaluation tools with the MCP server.
+func registerGenAIEvaluationTools(s *server.MCPServer, getClient getClientFn) error {
+	s.AddTools(genai.NewEvaluationTool(getClient).Tools()...)
 	return nil
 }
 
@@ -241,6 +249,10 @@ func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, s
 		case "inference-modelcatalog":
 			if err := registerModelCatalogTools(s, getClient); err != nil {
 				return fmt.Errorf("failed to register inference-modelcatalog tools: %w", err)
+			}
+		case "genai-evaluation":
+			if err := registerGenAIEvaluationTools(s, getClient); err != nil {
+				return fmt.Errorf("failed to register genai-evaluation tools: %w", err)
 			}
 		case "insights":
 			if err := registerInsightsTools(s, getClient); err != nil {

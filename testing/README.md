@@ -14,3 +14,7 @@ Usage:
 DIGITALOCEAN_API_TOKEN=your_token_here  DIGITALOCEAN_API_URL=https://api.digitalocean.com go test -v -tags=integration ./testing/...
 ```
 
+Optional environment variables:
+
+- `GENAI_EVALUATION_TEST_AGENT_WORKSPACE_NAME` — when set, enables `TestGenAIListEvaluationTestCases` in [e2e_genai_evaluation_test.go](e2e_genai_evaluation_test.go) against that agent workspace.
+

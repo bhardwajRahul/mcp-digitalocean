@@ -599,6 +599,7 @@ Each service provides a detailed README describing all available tools, resource
 - [DOCR Service](pkg/registry/docr/README.md)
 - [Gradient AI Service](pkg/registry/gradient-ai/README.md)
 - [Docs Service](pkg/registry/docs/README.md)
+- [GenAI evaluation](pkg/registry/genai/README.md)
 
 ## Example Tools
 
