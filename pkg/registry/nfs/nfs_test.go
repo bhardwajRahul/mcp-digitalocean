@@ -462,7 +462,7 @@ func TestNfsTool_listNfsSnapshots(t *testing.T) {
 			name: "Successful list filtered by share ID",
 			args: map[string]any{
 				"Region":  "nyc3",
-				"shareID": "nfs-abc",
+				"ShareID": "nfs-abc",
 			},
 			mockSetup: func(m *MockNfsService) {
 				m.EXPECT().
