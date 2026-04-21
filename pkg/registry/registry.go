@@ -16,6 +16,7 @@ import (
 	"mcp-digitalocean/pkg/registry/droplet"
 	"mcp-digitalocean/pkg/registry/functions"
 	"mcp-digitalocean/pkg/registry/genai"
+	genaibi "mcp-digitalocean/pkg/registry/genai-batchinference"
 	gradientai "mcp-digitalocean/pkg/registry/gradient-ai"
 	inferencemodelcatalog "mcp-digitalocean/pkg/registry/inference-modelcatalog"
 	"mcp-digitalocean/pkg/registry/insights"
@@ -42,6 +43,7 @@ var supportedServices = map[string]struct{}{
 	"gradient-ai":            {},
 	"inference-modelcatalog": {},
 	"genai-evaluation":       {},
+	"genai-batchinference":   {},
 	"insights":               {},
 	"doks":                   {},
 	"docr":                   {},
@@ -139,6 +141,12 @@ func registerModelCatalogTools(s *server.MCPServer, getClient getClientFn) error
 // registerGenAIEvaluationTools registers the GenAI evaluation tools with the MCP server.
 func registerGenAIEvaluationTools(s *server.MCPServer, getClient getClientFn) error {
 	s.AddTools(genai.NewEvaluationTool(getClient).Tools()...)
+	return nil
+}
+
+// registerGenAIBatchInferenceTools registers the GenAI batch inference tools with the MCP server.
+func registerGenAIBatchInferenceTools(s *server.MCPServer, getClient getClientFn) error {
+	s.AddTools(genaibi.NewBatchInferenceTool(getClient).Tools()...)
 	return nil
 }
 
@@ -253,6 +261,10 @@ func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, s
 		case "genai-evaluation":
 			if err := registerGenAIEvaluationTools(s, getClient); err != nil {
 				return fmt.Errorf("failed to register genai-evaluation tools: %w", err)
+			}
+		case "genai-batchinference":
+			if err := registerGenAIBatchInferenceTools(s, getClient); err != nil {
+				return fmt.Errorf("failed to register genai-batchinference tools: %w", err)
 			}
 		case "insights":
 			if err := registerInsightsTools(s, getClient); err != nil {
