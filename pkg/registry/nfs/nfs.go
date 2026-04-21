@@ -80,7 +80,7 @@ func (n *NfsTool) createFileShare(ctx context.Context, req mcp.CallToolRequest) 
 func (n *NfsTool) listFileShares(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := req.GetArguments()
 
-	region, ok := args["Region"].(string)
+	region, _ := args["Region"].(string)
 
 	page, ok := args["Page"].(float64)
 	if !ok || page < 1 {
@@ -178,7 +178,7 @@ func (n *NfsTool) deleteFileShare(ctx context.Context, req mcp.CallToolRequest) 
 func (n *NfsTool) listNfsSnapshots(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := req.GetArguments()
 	region, _ := args["Region"].(string)
-	shareID, _ := args["shareID"].(string)
+	shareID, _ := args["ShareID"].(string)
 
 	page, ok := args["Page"].(float64)
 	if !ok || page < 1 {
@@ -314,7 +314,7 @@ func (n *NfsTool) Tools() []server.ServerTool {
 				"nfs-snapshot-list",
 				mcp.WithDescription("List all NFS snapshots - supports pagination and filtering by region and share ID"),
 				mcp.WithString("Region", mcp.Description("Optional region of the NFS snapshot")),
-				mcp.WithString("shareID", mcp.Description("Optional ID of the NFS share to list snapshots for")),
+				mcp.WithString("ShareID", mcp.Description("Optional ID of the NFS share to list snapshots for")),
 				mcp.WithNumber("Page", mcp.DefaultNumber(1), mcp.Description("Page number of the results to fetch")),
 				mcp.WithNumber("PerPage", mcp.DefaultNumber(20), mcp.Description("Number of items returned per page")),
 			),

@@ -39,7 +39,7 @@ Delete a file share by ID.
 List NFS snapshots with optional filters. Supports pagination.  
 **Arguments:**  
   - `Region` (string, optional): Region filter  
-  - `shareID` (string, optional): Only list snapshots for this file share ID  
+  - `ShareID` (string, optional): Only list snapshots for this file share ID  
   - `Page` (number, default: 1): Page number  
   - `PerPage` (number, default: 20): Snapshots per page
 - **nfs-snapshot-get**  
@@ -98,4 +98,5 @@ Change the performance tier of a file share.
 - `nfs-file-share-list` returns a filtered summary of each file share; `nfs-file-share-get` returns the full file share object.
 - `nfs-snapshot-list` returns a summary of each snapshot; `nfs-snapshot-get` returns the full snapshot object.
 - Resize, snapshot, attach, detach, reassign, and performance-tier tools return a DigitalOcean NFS action object (JSON) for tracking asynchronous work.
-- The action tool **`nfs-snapshot`** creates a snapshot job for a file share; **`nfs-snapshot-list`**, **`nfs-snapshot-get`**, and **`nfs-snapshot-delete`** operate on snapshot resources by ID.
+- The action tool `**nfs-snapshot`** creates a snapshot job for a file share; `**nfs-snapshot-list**`, `**nfs-snapshot-get**`, and `**nfs-snapshot-delete**` operate on snapshot resources by ID.
+

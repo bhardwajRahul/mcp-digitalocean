@@ -121,6 +121,7 @@ func TestNfsDetachAndAttach(t *testing.T) {
 		detachedShare = callTool[godo.Nfs](t, "nfs-file-share-get", map[string]any{
 			"ID": activeShare.ID,
 		})
+		t.Logf("[Detach] Detached nfs share: %s State: %s", activeShare.Name, detachedShare.Status)
 		return detachedShare.Status == "INACTIVE"
 	}, defaultActionTimeout, defaultPollInterval, "nfs share did not detach in time")
 	t.Logf("[Detach] Successfully detached nfs share: %s from %s", activeShare.Name, vpcId)
@@ -136,7 +137,8 @@ func TestNfsDetachAndAttach(t *testing.T) {
 		attachedShare = callTool[godo.Nfs](t, "nfs-file-share-get", map[string]any{
 			"ID": activeShare.ID,
 		})
-		return attachedShare.Status == "ACTIVE"
+		t.Logf("[Attach] Attached nfs share: %s State: %s", attachedShare.Name, attachedShare.Status)
+		return attachedShare.Status == godo.NfsShareActive
 	}, defaultActionTimeout, defaultPollInterval, "nfs share did not attach in time")
 
 	t.Logf("[Attach] Successfully attached nfs share: %s to %s", activeShare.Name, vpcId)
