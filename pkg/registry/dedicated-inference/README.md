@@ -1,10 +1,10 @@
-# Gradient AI (`gradient-ai`)
+# Dedicated Inference (`dedicated-inference`)
 
 ## What this service does
 
 This package registers **Dedicated Inference** tools for the DigitalOcean MCP server. Dedicated Inference lets you run model workloads on GPU-backed infrastructure in your account. The tools call the **public** DigitalOcean API (`/v2/dedicated-inferences`) through `[godo](https://github.com/digitalocean/godo)`.
 
-**Enable these tools** by including the service key when you configure the server (see the main project docs): service name `**gradient-ai`**.
+**Enable these tools** by including the service key when you configure the server (see the main project docs): service name `**dedicated-inference`**.
 
 **Code layout**
 

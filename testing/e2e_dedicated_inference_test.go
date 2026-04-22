@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestDedicatedInferenceList exercises the gradient-ai MCP tools against the live API (list only; no create/delete).
+// TestDedicatedInferenceList exercises the dedicated-inference MCP tools against the live API (list only; no create/delete).
 func TestDedicatedInferenceList(t *testing.T) {
 	t.Parallel()
 
