@@ -177,6 +177,23 @@
         }
       },
       "type": "object"
+    },
+    "sso": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "required": {
+          "type": "boolean"
+        },
+        "issuer_url": {
+          "type": "string"
+        },
+        "client_id": {
+          "type": "string"
+        }
+      },
+      "type": "object"
     }
   },
   "type": "object"

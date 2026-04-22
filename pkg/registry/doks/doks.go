@@ -319,7 +319,7 @@ func (d *DoksTool) getDOKSClusterKubeConfig(ctx context.Context, req mcp.CallToo
 	}
 
 	// Make the API call
-	kubecfg, _, err := client.Kubernetes.GetKubeConfig(ctx, clusterID)
+	kubecfg, _, err := client.Kubernetes.GetKubeConfig(ctx, clusterID, nil)
 	if err != nil {
 		return mcp.NewToolResultErrorFromErr("failed to get kubeconfig", err), nil
 	}
