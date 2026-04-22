@@ -2,6 +2,8 @@
 
 This directory provides tools for managing DigitalOcean Functions (serverless) namespaces, actions, packages, triggers, activations, and access keys via the MCP Server. All operations are exposed as tools with argument-based input. Pagination and filtering are supported where applicable.
 
+For deploying a **local Functions project** (multi-file, with dependencies, or using `project.yml`), use `functions-deployment-guide` — it returns the step-by-step playbook the agent should follow to orchestrate `doctl serverless deploy` on the user's machine. The per-action CRUD tools below are for managing individual actions from inline code.
+
 ---
 
 ## Supported Tools
@@ -31,19 +33,19 @@ This directory provides tools for managing DigitalOcean Functions (serverless) n
 ### Access Key Tools
 
 - **functions-list-access-keys**
-  List access keys for a DigitalOcean Functions namespace. There is a limit of 200 access keys per account.
+  List access keys for a DigitalOcean Functions namespace. Returns metadata only (name, id, creation/expiry timestamps) — secret values are NOT returned and cannot be retrieved once a key has been created. Use this tool to check whether a namespace already has access keys, or to find stale agent-created keys (names starting with `mcp-agent-`) for cleanup before creating a new one. Keys whose names start with `mcp-do-` are reserved for this MCP server's own internal use and must not be deleted by agents. Hard limit: 200 access keys per account.
   **Arguments:**
     - `NamespaceID` (string, required): The UUID of the namespace
 
 - **functions-create-access-key**
-  Create an access key for a DigitalOcean Functions namespace. The secret is only returned once at creation time. WARNING: There is a limit of 200 access keys per account; use judiciously.
+  Create an access key for a DigitalOcean Functions namespace. The returned secret appears only in this response and cannot be retrieved later — store it immediately. Typical use: creating a short-lived credential so `doctl serverless connect <namespace> --access-key dof_v1_<id>:<secret>` can connect without a full DigitalOcean API token. For agent-created keys: use the prefix `mcp-agent-` followed by a timestamp (never `mcp-do-`, which is reserved for the MCP server and auto-cleaned); set `ExpiresIn` to `24h`; list and delete any stale `mcp-agent-*` keys first to avoid the 200-per-account limit. Requires the `function:admin` scope on the caller's API token.
   **Arguments:**
     - `NamespaceID` (string, required): The UUID of the namespace
-    - `Name` (string, required): A name for the access key
-    - `ExpiresIn` (string, optional): Optional expiration duration (e.g. '24h', '7d'). Minimum is 1h. Omit for non-expiring key.
+    - `Name` (string, required): A name for the access key. For agent-created keys use the prefix `mcp-agent-` followed by a timestamp. Never use the `mcp-do-` prefix — it is reserved for the MCP server.
+    - `ExpiresIn` (string, optional): Expiration duration such as `"24h"` or `"7d"` (minimum `"1h"`). Use `"24h"` for agent-created keys. Omit only when the user explicitly asks for a non-expiring key.
 
 - **functions-delete-access-key**
-  Delete an access key for a DigitalOcean Functions namespace.
+  Delete an access key for a DigitalOcean Functions namespace. Irreversible. Safe for an agent to delete without asking the user: keys whose names start with `mcp-agent-` (routine cleanup). Do NOT delete keys starting with `mcp-do-` (managed by the MCP server itself). Do NOT delete keys with any other name prefix without explicit user consent.
   **Arguments:**
     - `NamespaceID` (string, required): The UUID of the namespace
     - `KeyID` (string, required): The ID of the access key to delete
@@ -209,6 +211,14 @@ This directory provides tools for managing DigitalOcean Functions (serverless) n
   **Arguments:**
     - `NamespaceID` (string, required): The UUID of the namespace
     - `ActivationID` (string, required): The activation ID
+
+---
+
+### Deployment Guide Tool
+
+- **functions-deployment-guide**
+  Return the authoritative step-by-step guide for deploying a DigitalOcean Functions project from a local directory using `doctl serverless deploy`. Call this tool first when the user asks to deploy a function, update a deployed function's code, or set up a new Functions project. The guide covers preflight (`doctl` install + auth + serverless plugin), namespace setup and `doctl serverless connect` (with the access-key fallback), project scaffolding options, the local-vs-remote build decision, the deploy command itself, and post-deploy verification via the other `functions-*` MCP tools. Do not call this tool for routine per-action CRUD — use `functions-create-or-update-action` and related tools directly for those. The returned content is markdown; follow its instructions exactly rather than paraphrasing.
+  **Arguments:** None
 
 ---
 
