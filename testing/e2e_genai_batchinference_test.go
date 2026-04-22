@@ -58,6 +58,22 @@ func TestGenAIBatchInferenceFileUploadAndCreate(t *testing.T) {
 	require.NotEmpty(t, upload.UploadURL, "expected non-empty upload_url")
 	t.Logf("created file upload: file_id=%s", upload.FileID)
 
+	jsonlContent := `{"custom_id":"req-1","method":"POST","url":"/v1/chat/completions","body":{"model":"meta-llama/Meta-Llama-3.1-8B-Instruct","messages":[{"role":"user","content":"Hello"}]}}` + "\n"
+
+	ctx, c := getTestClient(t)
+	uploadResp, err := c.CallTool(ctx, mcp.CallToolRequest{
+		Params: mcp.CallToolParams{
+			Name: "genai-batch-inference-upload-file",
+			Arguments: map[string]any{
+				"UploadURL": upload.UploadURL,
+				"Content":   jsonlContent,
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.False(t, uploadResp.IsError, "upload-file tool should succeed")
+	t.Logf("uploaded JSONL content to presigned URL")
+
 	batch := callTool[godo.Batch](t, "genai-batch-inference-create", map[string]any{
 		"Provider":         "openai",
 		"CompletionWindow": "24h",
@@ -88,7 +104,7 @@ func TestGenAIBatchInferenceFileUploadAndCreate(t *testing.T) {
 	require.True(t, found, "created job should appear in list")
 
 	t.Logf("attempting best-effort cancel of batch job %s", batch.BatchID)
-	ctx, c := getTestClient(t)
+	ctx, c = getTestClient(t)
 	_, _ = c.CallTool(ctx, mcp.CallToolRequest{
 		Params: mcp.CallToolParams{
 			Name:      "genai-batch-inference-cancel",
