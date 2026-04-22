@@ -22,7 +22,6 @@ This package registers **Batch Inference** tools for the DigitalOcean MCP server
 | Tool | What it does |
 | --- | --- |
 | `genai-batch-inference-create-file` | Create a presigned URL for uploading a JSONL input file. |
-| `genai-batch-inference-upload-file` | Upload JSONL content to the presigned URL returned by `create-file`. |
 | `genai-batch-inference-create` | Create a new batch inference job (OpenAI or Anthropic). |
 | `genai-batch-inference-get` | Get a batch inference job's status and metadata. |
 | `genai-batch-inference-get-results` | Get the presigned download URL for completed job results. |
@@ -38,13 +37,6 @@ This package registers **Batch Inference** tools for the DigitalOcean MCP server
 | Argument | Required | Description |
 | --- | --- | --- |
 | `FileName` | yes | Name of the JSONL file (must end in `.jsonl`) |
-
-### `genai-batch-inference-upload-file`
-
-| Argument | Required | Description |
-| --- | --- | --- |
-| `UploadURL` | yes | Presigned upload URL from `create-file` response |
-| `Content` | yes | JSONL content to upload (newline-delimited JSON) |
 
 ### `genai-batch-inference-create`
 
@@ -75,7 +67,6 @@ This package registers **Batch Inference** tools for the DigitalOcean MCP server
 ## Responses
 
 - **create-file**: Returns `file_id`, `upload_url`, and `expires_at`.
-- **upload-file**: Returns a success message on successful upload.
 - **create**: Returns batch object with `batch_id`, `status`, `provider`, `request_counts`, timestamps.
 - **get**: Returns batch object (same shape as create response).
 - **get-results**: Returns `output_file_id` and nested `download` with `presigned_url` and `expires_at`.
@@ -86,4 +77,4 @@ This package registers **Batch Inference** tools for the DigitalOcean MCP server
 
 ## Auth
 
-Callers need a DigitalOcean API token with access to GenAI Batch Inference endpoints. The feature may require enablement on your account.
+Callers need a DigitalOcean API token with access to GenAI Batch Inference endpoints. The feature may be gated behind `FlipperGenAIBatchInference` per account/team.
