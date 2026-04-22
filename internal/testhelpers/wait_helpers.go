@@ -91,6 +91,16 @@ func WaitForImage(ctx context.Context, client *godo.Client, imageID int, predica
 	)
 }
 
+// WaitForNfsShare polls until the predicate returns true.
+func WaitForNfsShare(ctx context.Context, client *godo.Client, shareID string, predicate func(*godo.Nfs) bool, interval, timeout time.Duration) (*godo.Nfs, error) {
+	return waitForResource(ctx, interval, timeout,
+		func() (*godo.Nfs, *godo.Response, error) {
+			return client.Nfs.Get(ctx, shareID, "")
+		},
+		predicate,
+	)
+}
+
 // WaitForDropletDeleted checks for 404 status.
 func WaitForDropletDeleted(ctx context.Context, client *godo.Client, dropletID int, interval, timeout time.Duration) error {
 	_, err := WaitForDroplet(ctx, client, dropletID, nil, interval, timeout)
@@ -111,6 +121,11 @@ func IsDropletActive(d *godo.Droplet) bool {
 // IsImageAvailable checks if the image status is available.
 func IsImageAvailable(i *godo.Image) bool {
 	return i != nil && i.Status == imageStatusAvailable
+}
+
+// IsNfsShareActive checks if the NFS share status is active.
+func IsNfsShareActive(n *godo.Nfs) bool {
+	return n != nil && n.Status == godo.NfsShareActive
 }
 
 // MustGodoClient returns a client or error if the token is missing.
