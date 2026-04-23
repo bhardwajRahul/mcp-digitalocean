@@ -403,6 +403,8 @@ var serviceAliases = map[string]string{
 	"marketplace":          "marketplace",
 	"gradient":             "gradient",
 	"gradient ai":          "gradient",
+	"dedicated inference":  "ai-platform",
+	"dedicated-inference":  "ai-platform",
 	"gpu":                  "bare-metal-gpus",
 	"bare metal":           "bare-metal-gpus",
 	"gpu droplets":         "bare-metal-gpus",
