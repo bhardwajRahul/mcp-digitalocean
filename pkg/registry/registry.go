@@ -188,6 +188,7 @@ func registerFunctionsTools(s *server.MCPServer, getClient getClientFn) error {
 	s.AddTools(functions.NewActionTool(resolver).Tools()...)
 	s.AddTools(functions.NewPackageTool(resolver).Tools()...)
 	s.AddTools(functions.NewActivationTool(resolver).Tools()...)
+	s.AddTools(functions.NewDeploymentGuideTool().Tools()...)
 	return nil
 }
 
