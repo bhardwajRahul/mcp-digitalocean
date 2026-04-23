@@ -10,6 +10,7 @@ import (
 	"mcp-digitalocean/pkg/registry/apps"
 	"mcp-digitalocean/pkg/registry/common"
 	"mcp-digitalocean/pkg/registry/dbaas"
+	dedicatedinference "mcp-digitalocean/pkg/registry/dedicated-inference"
 	"mcp-digitalocean/pkg/registry/docr"
 	"mcp-digitalocean/pkg/registry/docs"
 	"mcp-digitalocean/pkg/registry/doks"
@@ -17,7 +18,6 @@ import (
 	"mcp-digitalocean/pkg/registry/functions"
 	"mcp-digitalocean/pkg/registry/genai"
 	genaibi "mcp-digitalocean/pkg/registry/genai-batchinference"
-	gradientai "mcp-digitalocean/pkg/registry/gradient-ai"
 	inferencemodelcatalog "mcp-digitalocean/pkg/registry/inference-modelcatalog"
 	"mcp-digitalocean/pkg/registry/insights"
 	"mcp-digitalocean/pkg/registry/marketplace"
@@ -41,7 +41,7 @@ var supportedServices = map[string]struct{}{
 	"spaces":                 {},
 	"databases":              {},
 	"marketplace":            {},
-	"gradient-ai":            {},
+	"dedicated-inference":    {},
 	"inference-modelcatalog": {},
 	"genai-evaluation":       {},
 	"genai-batchinference":   {},
@@ -126,9 +126,9 @@ func registerMarketplaceTools(s *server.MCPServer, getClient getClientFn) error 
 	return nil
 }
 
-// registerGradientAITools registers the Gradient AI dedicated inference tools with the MCP server.
-func registerGradientAITools(s *server.MCPServer, getClient getClientFn) error {
-	s.AddTools(gradientai.NewDedicatedInferenceTool(getClient).Tools()...)
+// registerDedicatedInferenceTools registers the Dedicated Inference tools with the MCP server.
+func registerDedicatedInferenceTools(s *server.MCPServer, getClient getClientFn) error {
+	s.AddTools(dedicatedinference.NewDedicatedInferenceTool(getClient).Tools()...)
 	return nil
 }
 
@@ -258,9 +258,9 @@ func Register(logger *slog.Logger, s *server.MCPServer, getClient getClientFn, s
 			if err := registerMarketplaceTools(s, getClient); err != nil {
 				return fmt.Errorf("failed to register marketplace tools: %w", err)
 			}
-		case "gradient-ai":
-			if err := registerGradientAITools(s, getClient); err != nil {
-				return fmt.Errorf("failed to register gradient-ai tools: %w", err)
+		case "dedicated-inference":
+			if err := registerDedicatedInferenceTools(s, getClient); err != nil {
+				return fmt.Errorf("failed to register dedicated-inference tools: %w", err)
 			}
 		case "inference-modelcatalog":
 			if err := registerModelCatalogTools(s, getClient); err != nil {

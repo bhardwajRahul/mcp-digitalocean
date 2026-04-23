@@ -173,7 +173,7 @@ The easiest way to get started is to use DigitalOcean's hosted MCP services. Eac
 | droplets                 | https://droplets.mcp.digitalocean.com/mcp                   | Create, manage, resize, snapshot, and monitor droplets (virtual machines) on DigitalOcean. |
 | docr                     | https://docr.mcp.digitalocean.com/mcp                       | Manage DigitalOcean Container Registry repositories, tags, manifests, and garbage collection. |
 | genai-batchinference     | https://genai-batchinference.mcp.digitalocean.com/mcp       | Create, manage, and monitor batch inference jobs for asynchronous bulk AI processing. |
-| gradient-ai              | https://gradient-ai.mcp.digitalocean.com/mcp                | Manage Dedicated Inference instances for GPU-accelerated model serving. |
+| dedicated-inference      | https://dedicated-inference.mcp.digitalocean.com/mcp        | Manage Dedicated Inference instances for GPU-accelerated model serving. |
 | inference-modelcatalog   | https://inference-modelcatalog.mcp.digitalocean.com/mcp     | Browse the DigitalOcean Inference model catalog, search for models, and get model cards. |
 | insights                 | https://insights.mcp.digitalocean.com/mcp                   | Monitors your resources, endpoints and alert you when they're slow, unavailable, or SSL certificates are expiring. |
 | marketplace              | https://marketplace.mcp.digitalocean.com/mcp                | Discover and manage DigitalOcean Marketplace applications. |
@@ -599,7 +599,7 @@ Each service provides a detailed README describing all available tools, resource
 - [Functions Service](pkg/registry/functions/README.md)
 - [DOKS Service](pkg/registry/doks/README.md)
 - [DOCR Service](pkg/registry/docr/README.md)
-- [Gradient AI Service](pkg/registry/gradient-ai/README.md)
+- [Dedicated Inference Service](pkg/registry/dedicated-inference/README.md)
 - [Inference Model Catalog Service](pkg/registry/inference-modelcatalog/README.md)
 - [Docs Service](pkg/registry/docs/README.md)
 - [GenAI evaluation](pkg/registry/genai/README.md)

@@ -1,4 +1,4 @@
-package gradientai
+package dedicatedinference
 
 import (
 	"context"

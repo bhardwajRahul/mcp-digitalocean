@@ -148,6 +148,9 @@ func TestResolveServiceSlug(t *testing.T) {
 		{"serverless", "functions"},
 		{"unknown service", "unknown-service"},
 		{"  droplets  ", "droplets"},
+		{"dedicated inference", "ai-platform"},
+		{"dedicated-inference", "ai-platform"},
+		{"Dedicated Inference", "ai-platform"},
 	}
 
 	for _, tc := range tests {
