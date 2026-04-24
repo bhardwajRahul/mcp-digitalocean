@@ -8,19 +8,23 @@ All commands and flags are verified against `doctl` 1.154.0 (see Appendix D).
 
 ---
 
-## 0. When to use this guide
+## 0. Route the request first — do you even need this guide?
 
-Follow this guide when the user asks to:
+Before following anything else in this document, classify the user's ask. Most "make me a function" requests do **not** need `doctl` or a local project. Use this table:
 
-- Deploy a function, package, or project to DigitalOcean Functions
-- Update an existing deployed function with new code
-- Set up a new Functions project from scratch
+| Situation | What to do |
+|---|---|
+| Single function, single file, no third-party dependencies, no local build step | Call `functions-create-or-update-action` directly with the source inline. Stop reading this guide. |
+| User is only invoking / listing / inspecting an already-deployed function | Use the relevant `functions-*` MCP tool. Stop reading this guide. |
+| User is only managing triggers on an already-deployed function | Use `functions-create-trigger` / `functions-update-trigger`. Stop reading this guide. |
+| Multi-file function, or any function with dependencies (`package.json` with non-empty `dependencies`, `requirements.txt`, `go.mod`, `composer.json`), or any `build.sh` / `build.cmd` | Follow this guide — you will need `doctl serverless init` + `doctl serverless deploy`, almost certainly with `--remote-build`. |
+| User explicitly asked for a `project.yml` / `doctl` / remote-build deploy, or pointed you at an existing project directory | Follow this guide. |
+| Updating the code of a function that was previously deployed as a multi-file / with-deps project | Follow this guide (incremental deploy via `doctl`). |
+| Updating the code of a function that was previously deployed as inline code | Call `functions-create-or-update-action` again. Do not silently "upgrade" it to a project — ask the user first if they now want a project layout. |
 
-Do **not** follow this guide for:
+**Rule of thumb:** `doctl` + a project directory is the right tool only when a build step or multiple files are genuinely needed. For one file and no deps, the OpenWhisk API path via `functions-create-or-update-action` is faster, avoids installing `doctl`, avoids a namespace connect step, and leaves nothing on the user's disk.
 
-- Creating a single action from inline code with no dependencies — use the `functions-create-or-update-action` MCP tool directly.
-- Invoking, listing, or inspecting already-deployed functions — use the relevant `functions-*` MCP tools.
-- Managing triggers on already-deployed functions — use `functions-create-trigger` / `functions-update-trigger`.
+If you're unsure which bucket the request falls into — in particular, whether the user wants a quick one-off or a real project they'll iterate on — **ask them once** before committing to either path. Do not guess.
 
 ---
 
@@ -61,7 +65,7 @@ Run:
 doctl auth list
 ```
 
-- **If at least one authenticated context is listed:** continue.
+- **If at least one authenticated context is listed:** continue. Note that a listed context is **not** a guarantee it's authed to the same DigitalOcean account as the MCP server — that alignment is checked in §3.3a before any namespace-scoped `doctl` call.
 - **If no contexts are listed:** stop and tell the user:
   > "I need you to authenticate `doctl` once before I can deploy. Run `doctl auth init` and paste your DigitalOcean API token when prompted. The token must have the `function:admin` scope for `connect` and `deploy` to work. Let me know when that's done."
   Do not attempt to provide a token yourself. Do not proceed until the user confirms.
@@ -102,6 +106,65 @@ Stop and ask the user:
 
 Then call `functions-create-namespace` with the user's answers. Capture the returned `NamespaceID`.
 
+### 3.3a Before connecting, make sure `doctl` and the MCP server are on the same account
+
+This is the single most common source of confusing deploy failures, so check it up front — **before** running `doctl serverless connect`.
+
+**The problem.** The MCP server authenticates to DigitalOcean using the API token set in the MCP **client's** config (e.g. `env.DIGITALOCEAN_API_TOKEN` in `~/.cursor/mcp.json` for Cursor). Local `doctl` authenticates using whichever context is marked `(current)` in `doctl auth list`. When those two tokens belong to **different DigitalOcean accounts**, you will see this symptom:
+
+- `functions-list-namespaces` (MCP tool) returns namespaces from the MCP server's account.
+- `doctl serverless connect <hint>` fails with "namespace not found," or — worse — silently connects to a same-named namespace on the other account.
+
+**Detection.**
+
+1. Run `doctl account get --format UUID --no-header` to capture the account UUID behind the active `doctl` context.
+2. Compare against what the MCP server sees. There is currently no MCP tool that returns the server's account UUID directly, so use this proxy: if the user pointed at a namespace by label or UUID and it appears in `functions-list-namespaces` but not in `doctl serverless namespaces list`, the two tokens are on different accounts.
+
+If they match, skip to §3.3. Otherwise continue.
+
+**Remediation — confirm with the user first.** Stop and ask:
+
+> "Your local `doctl` is authenticated to a different DigitalOcean account than the MCP server. The namespace you asked me to deploy to (`<name>`) lives on the MCP server's account, not the one `doctl` is currently using. I can fix this by adding a new `doctl` auth context that uses the same API token as the MCP server. Okay to proceed? (If you intentionally have them on different accounts, tell me and I'll stop.)"
+
+If the user says yes:
+
+1. **Read** the DigitalOcean API token from the MCP client's config file using your file-reading tool. Common locations: `~/.cursor/mcp.json`, `~/.config/<client>/mcp.json`, the workspace's `.cursor/mcp.json`. Look for the `mcp-digitalocean` server entry and extract `env.DIGITALOCEAN_API_TOKEN`. Do **not** ask the user to paste the token, and do **not** echo it in any tool call or message.
+
+2. **Check** whether a context named `mcp-digitalocean` already exists in `doctl auth list`. If yes, jump to step 4 (assume the stored token is still valid). If the problem persists after switching, come back and rerun step 3 to overwrite the context with the current token.
+
+3. **Create** the context, piping the token via stdin so it never appears as a command-line argument (which would land in shell history):
+
+   ```bash
+   # Put the token in a shell variable — never echo this variable to the user.
+   # The value comes from what you read in step 1.
+   DO_MCP_TOKEN='<token-value-read-from-the-MCP-config>'
+   printf '%s\n' "$DO_MCP_TOKEN" | doctl auth init --context mcp-digitalocean
+   unset DO_MCP_TOKEN
+   ```
+
+4. **Switch** `doctl` to the new context:
+
+   ```bash
+   doctl auth switch --context mcp-digitalocean
+   ```
+
+5. Verify with `doctl auth list` that `mcp-digitalocean` is now marked `(current)`, then go to §3.3.
+
+**Less invasive alternative — per-command `--context`.** If the user prefers not to change their active `doctl` context (e.g. they use `doctl` for other DigitalOcean work on a different account), skip step 4 above and instead pass `--context mcp-digitalocean` on every subsequent `doctl` invocation:
+
+```bash
+doctl --context mcp-digitalocean serverless connect <hint>
+doctl --context mcp-digitalocean serverless deploy <project-path> -o json --remote-build
+```
+
+Pick this variant when the user explicitly says so, or when `doctl auth list` shows multiple contexts they clearly care about.
+
+**Guardrails:**
+
+- **Never** run `doctl auth init` without `--context`. That overwrites the user's default context silently.
+- **Never** echo the MCP server's token in any tool output, log line, or message to the user. Redact it in any summary. Pipe via `printf` + stdin; do not put the token on `doctl auth init`'s command line.
+- If you cannot read the MCP client's config (e.g. the token is injected into the server process by a secret manager and is not on disk), stop and ask the user to either (a) paste the token into `doctl auth init --context mcp-digitalocean` themselves, or (b) confirm they want to deploy to the account `doctl` is currently using instead of the MCP server's account. Do not guess.
+
 ### 3.3 Connect `doctl` to the namespace
 
 Prefer the simplest path that works:
@@ -125,24 +188,22 @@ Then continue:
 
 **Option B — connect via an access key:** use this only when Option A fails.
 
-1. Call `functions-list-access-keys` for the namespace. If any keys exist with names matching the prefix `mcp-agent-`, call `functions-delete-access-key` for each. This prevents accumulating stale keys.
+**Prefix rules — strict, read before creating any key:**
+- Use the prefix `mcp-agent-` for keys you create here. They expire on their own after 24h, so no proactive cleanup is required.
+- `mcp-do-*` is **reserved for this MCP server's own internal use.** Never create keys with this prefix; any you do create will be deleted on the server's next resolution of that namespace. Never delete keys with this prefix either — the server manages them.
+- Keys with any other prefix belong to the user or to other tooling. Do not touch them without explicit user consent.
 
-   **Prefix rules — strict:**
-   - `mcp-agent-*` — safe to delete; these are prior agent-created keys.
-   - `mcp-do-*` — **reserved for this MCP server's own internal use.** Never create or delete keys with this prefix. The server manages them automatically (creates on demand, cleans up orphans, TTL-driven expiry). Any `mcp-do-*` key you create will be deleted on the server's next resolution of that namespace.
-   - Any other prefix — do **not** delete without explicit user consent; these belong to the user or to other tooling.
-
-2. Call `functions-create-access-key` with:
+1. Call `functions-create-access-key` with:
    - `Name`: `mcp-agent-<YYYYMMDD-HHMMSS>` (e.g. `mcp-agent-20260421-143000`)
    - `ExpiresIn`: `"24h"`
 
-3. Capture the returned key id and secret. **The secret is returned only once and cannot be retrieved later.**
-4. Run:
+2. Capture the returned key id and secret. **The secret is returned only once and cannot be retrieved later.**
+3. Run:
    ```bash
    doctl serverless connect <hint> --access-key dof_v1_<access-key-id>:<secret>
    ```
    The value of `--access-key` is a single string: the literal prefix `dof_v1_`, followed by the access key id, followed by `:`, followed by the secret. Example: `dof_v1_abc123:xyz789`.
-5. **Never print the secret to the user in plain form.** Redact it in any summary you produce. Do not write it to a file unless necessary; if you must, write it to a gitignored temp path and delete it immediately after connect succeeds.
+4. **Never print the secret to the user in plain form.** Redact it in any summary you produce. Do not write it to a file unless necessary; if you must, write it to a gitignored temp path and delete it immediately after connect succeeds.
 
 ### 3.4 Verify the connection
 
@@ -159,6 +220,8 @@ Confirm the output shows the intended namespace as connected. If not, stop and r
 ## 4. Phase 3 — Project preparation
 
 ### 4.1 Decide the project shape
+
+**Precondition — re-check §0 first.** You should only be in this section if §0 routed you here: the user explicitly asked for a `project.yml` / `doctl` deploy, pointed you at an existing project directory, or the function genuinely needs a build step (deps, multiple files, `build.sh`). If the user just wants a trivially small single-file function with no dependencies and never mentioned `doctl` or a project, **stop and go back to §0** — the correct tool is `functions-create-or-update-action`, not a scaffold. Row B below (single file, no deps) is reachable here only when the user explicitly wanted a project around an otherwise-simple function, e.g. "give me a `project.yml` with a hello-world handler so I can iterate on it with `doctl` myself."
 
 Determine which scenario applies:
 
@@ -459,7 +522,7 @@ End with a concise summary:
 - **Never fabricate commands.** If you don't know the exact flag, stop and ask the user (or ask to run `--help` first).
 - **Never rerun a failed deploy more than once** without either (a) making a concrete change or (b) getting user permission.
 - **Never delete user files** without explicit permission. This includes `project.yml`, `node_modules`, `.deployed/`, or anything else in the project directory.
-- **Never leak secrets.** Access key secrets, API tokens, and credentials must not appear in messages to the user, even in error reports.
+- **Never leak secrets.** Access key secrets, API tokens, and credentials must not appear in messages to the user, even in error reports. In particular, when aligning `doctl` to the MCP server's token (§3.3a), pipe the token into `doctl auth init` via `printf` + stdin — never pass it on the command line with `doctl auth init -t <token>` or `echo <literal-token> | ...`, both of which land the token in shell history.
 - **Remember user decisions within the session.** Once the user has answered a question in this conversation — which namespace to use, local vs. remote build, `web` vs. non-web, runtime choice, etc. — do not ask the same question again for subsequent deploys in the same session. Reuse the previous answer. Only re-ask if the user changes the project in a way that invalidates the prior decision (e.g. they add dependencies to a previously dep-free project).
 
 ---
@@ -479,6 +542,7 @@ Stop and ask the user when:
 - The choice between local build and remote build is ambiguous (see section 5.1)
 - Any step requires `sudo`
 - Before invoking a deployed function for verification (Section 6.2) — propose the payload and wait for explicit consent. Never invoke automatically, because invocation triggers whatever side effects the function has (SMS, email, paid API calls, DB writes).
+- The local `doctl` context is authenticated to a different DigitalOcean account than the MCP server (§3.3a), and either the user hasn't confirmed whether to realign or the MCP client's token is not readable from disk.
 
 ---
 
