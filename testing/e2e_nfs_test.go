@@ -14,7 +14,7 @@ import (
 func TestNfsShareLifecycleAndGet(t *testing.T) {
 	t.Parallel()
 
-	newShare := CreateTestNfsShare(t, "mcp-e2e-nfs")
+	newShare := CreateTestNfsShare(t, "nfs-e2e-lifecycle")
 
 	activeShare := WaitForNfsShareActive(t, newShare.ID, defaultActionTimeout)
 
@@ -36,7 +36,7 @@ func TestNfsShareLifecycleAndGet(t *testing.T) {
 func TestNfsResize(t *testing.T) {
 	t.Parallel()
 
-	newShare := CreateTestNfsShare(t, "mcp-e2e-nfs")
+	newShare := CreateTestNfsShare(t, "nfs-e2e-resize")
 
 	activeShare := WaitForNfsShareActive(t, newShare.ID, defaultActionTimeout)
 
@@ -67,9 +67,9 @@ func TestNfsResize(t *testing.T) {
 }
 
 func TestNfsSnapshot(t *testing.T) {
-	t.Parallel()
+	t.Skip("Skipping due to godo client having no way to poll nfs action. Nfs action is a uuid, while all methods require int id")
 
-	newShare := CreateTestNfsShare(t, "mcp-e2e-nfs")
+	newShare := CreateTestNfsShare(t, "nfs-e2e-snapshot")
 
 	activeShare := WaitForNfsShareActive(t, newShare.ID, defaultActionTimeout)
 	snapshotName := fmt.Sprintf("e2e-snap-%d", time.Now().Unix())
@@ -105,7 +105,7 @@ func TestNfsSnapshot(t *testing.T) {
 func TestNfsDetachAndAttach(t *testing.T) {
 	t.Parallel()
 
-	newShare := CreateTestNfsShare(t, "mcp-e2e-nfs")
+	newShare := CreateTestNfsShare(t, "nfs-e2e-attach")
 
 	activeShare := WaitForNfsShareActive(t, newShare.ID, defaultActionTimeout)
 
