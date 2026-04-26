@@ -52,7 +52,8 @@ func (t *DeploymentGuideTool) Tools() []server.ServerTool {
 						"update-inline) or for trigger management — use the matching `functions-*` "+
 						"tool.\n\n"+
 						"The guide itself covers preflight (`doctl` install, auth, serverless plugin), "+
-						"namespace selection and connect (including the access-key fallback), project "+
+						"namespace selection and connect via `doctl serverless connect <hint>` "+
+						"(with `doctl`/MCP-server account alignment when needed), project "+
 						"scaffolding via `doctl serverless init`, the local-vs-remote-build decision, "+
 						"post-deploy verification via the other `functions-*` MCP tools, supported "+
 						"runtimes, stop conditions, and error-handling rules.\n\n"+
