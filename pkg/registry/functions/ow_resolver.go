@@ -23,8 +23,11 @@ const (
 	// so we never hand out a key that expires mid-request.
 	keyRefreshBuffer = time.Hour
 	// Maximum entries in the auth cache. Prevents unbounded memory growth
-	// under high-cardinality workloads (many users × namespaces).
-	maxCacheEntries = 1024
+	// under high-cardinality workloads (many users × namespaces). Sized to
+	// comfortably absorb demo-driven traffic spikes (~6000 concurrent
+	// user/namespace pairs, ~3 MB of memory at full capacity) while still
+	// evicting stale credentials for users who haven't returned recently.
+	maxCacheEntries = 6000
 )
 
 // cachedAuth holds a resolved OW client and its expiry metadata.
