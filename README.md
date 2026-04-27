@@ -622,6 +622,8 @@ Each service provides a detailed README describing all available tools, resource
 - Flush a CDN cache: `cdn-flush-cache`
 - Create a VPC peering connection: `vpc-peering-create`
 - Delete a VPC peering connection: `vpc-peering-delete`
+- Search DigitalOcean documentation: `docs-search`
+- Get a quickstart guide for a service: `docs-get-quickstart`
 
 ## Contributing
 
