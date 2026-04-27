@@ -182,6 +182,8 @@ The easiest way to get started is to use DigitalOcean's hosted MCP services. Eac
 | spaces                   | https://spaces.mcp.digitalocean.com/mcp                     | DigitalOcean Spaces object storage and Spaces access keys for S3-compatible storage. |
 | docs                     | https://docs.mcp.digitalocean.com/mcp                       | Search and retrieve DigitalOcean public documentation. No API token required. |
 | genai-evaluation         | https://genai-evaluation.mcp.digitalocean.com/mcp           | Manage and run evaluation workflows in DigitalOcean's GenAI platform. |
+| nfs                      | https://nfs.mcp.digitalocean.com/mcp                        | Manage DigitalOcean NFS file shares and file share snapshots. |
+| volumes                  | https://volumes.mcp.digitalocean.com/mcp                    | Manage DigitalOcean block storage volumes and volume snapshots. |
 
 ---
 
