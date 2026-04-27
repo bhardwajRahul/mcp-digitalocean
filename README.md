@@ -607,6 +607,8 @@ Each service provides a detailed README describing all available tools, resource
 - [Docs Service](pkg/registry/docs/README.md)
 - [GenAI evaluation](pkg/registry/genai/README.md)
 - [GenAI Batch Inference Service](pkg/registry/genai-batchinference/README.md)
+- [NFS Service](pkg/registry/nfs/README.md)
+- [Volumes Service](pkg/registry/volumes/README.md)
 
 ## Example Tools
 
